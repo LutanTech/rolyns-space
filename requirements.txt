@@ -5,3 +5,4 @@ Markdown
 Werkzeug
 gunicorn
 email-validator
+markdown2
