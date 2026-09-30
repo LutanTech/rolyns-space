@@ -1,0 +1,79 @@
+<!-- templates/admin/dashboard.html -->
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard — {{ site_name }}{% endblock %}
+
+{% block content %}
+<div class="space-y-8">
+    <div class="flex items-center justify-between border-b border-gray-100 pb-6">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">Admin Dashboard</h1>
+            <p class="text-xs text-gray-500">Manage publications, comments and site stats.</p>
+        </div>
+        <div class="flex items-center space-x-3">
+            <a href="{{ url_for('admin.article_create') }}" class="px-4 py-2 bg-[#7cffcb] text-gray-900 text-xs font-bold rounded hover:opacity-90 transition">
+                + New Article
+            </a>
+            <a href="{{ url_for('admin.logout') }}" class="px-4 py-2 border border-gray-200 text-gray-600 text-xs font-bold rounded hover:bg-gray-50 transition">
+                Logout
+            </a>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
+        <div class="p-6 bg-white border border-gray-100 rounded space-y-1">
+            <span class="text-xs text-gray-500 font-medium">Total Articles</span>
+            <div class="text-2xl font-bold text-gray-900">{{ total_articles }}</div>
+        </div>
+        <div class="p-6 bg-white border border-gray-100 rounded space-y-1">
+            <span class="text-xs text-gray-500 font-medium">Comments</span>
+            <div class="text-2xl font-bold text-gray-900">{{ total_comments }}</div>
+        </div>
+        <div class="p-6 bg-white border border-gray-100 rounded space-y-1">
+            <span class="text-xs text-gray-500 font-medium">Subscribers</span>
+            <div class="text-2xl font-bold text-gray-900">{{ total_subscribers }}</div>
+        </div>
+    </div>
+
+    <div class="space-y-4">
+        <h2 class="text-lg font-bold text-gray-900">Articles</h2>
+        <div class="overflow-x-auto border border-gray-100 rounded">
+            <table class="w-full text-left text-xs text-gray-600">
+                <thead class="bg-gray-50 border-b border-gray-100 font-bold uppercase text-gray-700">
+                    <tr>
+                        <th class="p-3">Title</th>
+                        <th class="p-3">Category</th>
+                        <th class="p-3">Status</th>
+                        <th class="p-3">Views</th>
+                        <th class="p-3 text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100 bg-white">
+                    {% for article in articles %}
+                    <tr>
+                        <td class="p-3 font-semibold text-gray-900">{{ article.title }}</td>
+                        <td class="p-3">{{ article.category.name }}</td>
+                        <td class="p-3">
+                            <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase {% if article.status == 'published' %}bg-green-50 text-green-700{% else %}bg-yellow-50 text-yellow-700{% endif %}">
+                                {{ article.status }}
+                            </span>
+                        </td>
+                        <td class="p-3">{{ article.views_count }}</td>
+                        <td class="p-3 text-right space-x-2">
+                            <a href="{{ url_for('admin.article_edit', id=article.id) }}" class="text-[#7cffcb] font-bold hover:underline">Edit</a>
+                            <form action="{{ url_for('admin.article_delete', id=article.id) }}" method="POST" class="inline" onsubmit="return confirm('Delete article?');">
+                                <button type="submit" class="text-red-600 font-bold hover:underline">Delete</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="5" class="p-4 text-center text-gray-400">No articles found.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

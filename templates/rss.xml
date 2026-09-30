@@ -1,0 +1,18 @@
+<!-- templates/rss.xml -->
+<?xml version="1.0" encoding="UTF-8" ?>
+<rss version="2.0">
+<channel>
+  <title>{{ site_name }}</title>
+  <link>https://{{ domain }}</link>
+  <description>Personal publication by Jerry Rolyns</description>
+  {% for article in articles %}
+  <item>
+    <title>{{ article.title }}</title>
+    <link>https://{{ domain }}{{ url_for('article_detail', slug=article.slug) }}</link>
+    <description>{{ article.summary }}</description>
+    <pubDate>{{ article.published_at.strftime('%a, %d %b %Y %H:%M:%S GMT') }}</pubDate>
+    <guid>https://{{ domain }}{{ url_for('article_detail', slug=article.slug) }}</guid>
+  </item>
+  {% endfor %}
+</channel>
+</rss>

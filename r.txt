@@ -1,0 +1,7 @@
+Flask
+Flask-SQLAlchemy
+Flask-Migrate
+Markdown
+Werkzeug
+gunicorn
+email-validator

@@ -1,0 +1,67 @@
+<!-- templates/admin/editor.html -->
+{% extends "base.html" %}
+
+{% block title %}{% if article %}Edit Article{% else %}New Article{% endif %} — {{ site_name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-6">
+    <div class="flex items-center justify-between border-b border-gray-100 pb-4">
+        <h1 class="text-2xl font-bold text-gray-900">
+            {% if article %}Edit Article{% else %}Create New Article{% endif %}
+        </h1>
+        <a href="{{ url_for('admin.dashboard') }}" class="text-xs text-gray-500 hover:underline">&larr; Back to Dashboard</a>
+    </div>
+
+    <form method="POST" enctype="multipart/form-data" class="space-y-6">
+        <div>
+            <label class="block text-xs font-bold uppercase text-gray-700 mb-1">Title</label>
+            <input type="text" name="title" value="{{ article.title if article else '' }}" required class="w-full px-4 py-2 text-sm border border-gray-200 rounded focus:outline-none focus:border-[#7cffcb]">
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+                <label class="block text-xs font-bold uppercase text-gray-700 mb-1">Category</label>
+                <select name="category_id" required class="w-full px-4 py-2 text-xs border border-gray-200 rounded focus:outline-none focus:border-[#7cffcb]">
+                    {% for category in categories %}
+                    <option value="{{ category.id }}" {% if article and article.category_id == category.id %}selected{% endif %}>
+                        {{ category.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold uppercase text-gray-700 mb-1">Status</label>
+                <select name="status" class="w-full px-4 py-2 text-xs border border-gray-200 rounded focus:outline-none focus:border-[#7cffcb]">
+                    <option value="published" {% if article and article.status == 'published' %}selected{% endif %}>Published</option>
+                    <option value="draft" {% if article and article.status == 'draft' %}selected{% endif %}>Draft</option>
+                </select>
+            </div>
+        </div>
+
+        <div>
+            <label class="block text-xs font-bold uppercase text-gray-700 mb-1">Summary</label>
+            <textarea name="summary" rows="2" required class="w-full px-4 py-2 text-xs border border-gray-200 rounded focus:outline-none focus:border-[#7cffcb]">{{ article.summary if article else '' }}</textarea>
+        </div>
+
+        <div>
+            <label class="block text-xs font-bold uppercase text-gray-700 mb-1">Content (Markdown)</label>
+            <textarea name="content_markdown" rows="14" required class="w-full p-4 font-mono text-xs border border-gray-200 rounded focus:outline-none focus:border-[#7cffcb]">{{ article.content_markdown if article else '' }}</textarea>
+        </div>
+
+        <div class="flex items-center space-x-2">
+            <input type="checkbox" name="is_featured" id="is_featured" {% if article and article.is_featured %}checked{% endif %} class="rounded border-gray-300">
+            <label for="is_featured" class="text-xs font-bold text-gray-700">Feature this article on homepage</label>
+        </div>
+
+        <div>
+            <label class="block text-xs font-bold uppercase text-gray-700 mb-1">Featured Image</label>
+            <input type="file" name="featured_image" class="text-xs text-gray-500">
+        </div>
+
+        <button type="submit" class="px-6 py-2 bg-[#7cffcb] text-gray-900 text-xs font-bold rounded hover:opacity-90 transition">
+            Save Article
+        </button>
+    </form>
+</div>
+{% endblock %}

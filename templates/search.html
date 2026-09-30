@@ -1,0 +1,44 @@
+<!-- templates/search.html -->
+{% extends "base.html" %}
+
+{% block title %}Search Results — {{ site_name }}{% endblock %}
+
+{% block content %}
+<div class="space-y-8">
+    <div class="border-b border-gray-100 pb-6">
+        <h1 class="text-3xl font-bold text-gray-900">Search</h1>
+        {% if query %}
+        <p class="text-sm text-gray-600 mt-1">Showing results for "<span class="font-semibold text-gray-900">{{ query }}</span>"</p>
+        {% else %}
+        <p class="text-sm text-gray-600 mt-1">Search through articles, tutorials and reflections.</p>
+        {% endif %}
+    </div>
+
+    <form action="{{ url_for('search') }}" method="GET" class="flex gap-2 max-w-xl">
+        <input type="text" name="q" value="{{ query }}" placeholder="Type keywords..." required class="flex-grow px-4 py-2 text-sm border border-gray-200 rounded focus:outline-none focus:border-[#7cffcb]">
+        <button type="submit" class="px-6 py-2 bg-[#7cffcb] text-gray-900 text-sm font-bold rounded hover:opacity-90 transition">
+            Search
+        </button>
+    </form>
+
+    {% if query %}
+    <div class="space-y-6 pt-4">
+        {% for article in results %}
+        <article class="p-6 border border-gray-100 rounded-lg space-y-2 bg-white">
+            <div class="flex items-center space-x-2 text-xs text-[#7cffcb] font-semibold">
+                <span>{{ article.category.name }}</span>
+                <span>&bull;</span>
+                <span class="text-gray-500">{{ article.published_at.strftime('%b %d, %Y') }}</span>
+            </div>
+            <h2 class="text-xl font-bold text-gray-900 hover:text-[#7cffcb] transition">
+                <a href="{{ url_for('article_detail', slug=article.slug) }}">{{ article.title }}</a>
+            </h2>
+            <p class="text-sm text-gray-600 leading-relaxed">{{ article.summary }}</p>
+        </article>
+        {% else %}
+        <p class="text-sm text-gray-500 italic py-8">No articles matched your search query.</p>
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

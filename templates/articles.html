@@ -1,0 +1,80 @@
+<!-- templates/articles.html -->
+{% extends "base.html" %}
+
+{% block title %}Articles — {{ site_name }}{% endblock %}
+
+{% block content %}
+<div class="space-y-8">
+    <div class="border-b border-gray-100 pb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900">
+                {% if selected_category %}
+                    Category: {{ selected_category.name }}
+                {% elif selected_tag %}
+                    Tag: #{{ selected_tag.name }}
+                {% else %}
+                    All Articles
+                {% endif %}
+            </h1>
+            <p class="text-sm text-gray-600 mt-1">
+                {% if selected_category %}
+                    {{ selected_category.description or 'Browsing articles in this category.' }}
+                {% else %}
+                    Exploring thoughts, tutorials and long-form writing.
+                {% endif %}
+            </p>
+        </div>
+
+        {% if selected_category or selected_tag %}
+        <a href="{{ url_for('articles_list') }}" class="text-xs font-semibold text-[#7cffcb] hover:underline self-start md:self-auto">
+            &larr; Clear Filter
+        </a>
+        {% endif %}
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        {% for article in articles %}
+        <article class="flex flex-col bg-white border border-gray-100 rounded-lg overflow-hidden shadow-xs hover:shadow-md transition duration-200">
+            {% if article.featured_image %}
+            <a href="{{ url_for('article_detail', slug=article.slug) }}" class="block overflow-hidden h-48 bg-gray-100">
+                <img src="{{ article.featured_image }}" alt="{{ article.title }}" class="w-full h-full object-cover hover:scale-105 transition duration-300">
+            </a>
+            {% endif %}
+            <div class="p-6 flex-grow flex flex-col">
+                <div class="flex items-center space-x-2 text-xs text-[#7cffcb] font-semibold mb-2">
+                    <a href="{{ url_for('articles_list', category=article.category.slug) }}" class="hover:underline">{{ article.category.name }}</a>
+                    <span>&bull;</span>
+                    <span class="text-gray-500">{{ article.reading_time }} min read</span>
+                </div>
+                <h2 class="text-lg font-bold text-gray-900 mb-2 leading-snug hover:text-[#7cffcb] transition">
+                    <a href="{{ url_for('article_detail', slug=article.slug) }}">{{ article.title }}</a>
+                </h2>
+                <p class="text-sm text-gray-600 line-clamp-3 mb-4 flex-grow">{{ article.summary }}</p>
+                <div class="pt-4 border-t border-gray-50 flex items-center justify-between text-xs text-gray-500">
+                    <span>{{ article.published_at.strftime('%b %d, %Y') }}</span>
+                    <a href="{{ url_for('article_detail', slug=article.slug) }}" class="font-semibold text-[#7cffcb] hover:underline">Read Article &rarr;</a>
+                </div>
+            </div>
+        </article>
+        {% else %}
+        <div class="col-span-full py-12 text-center text-gray-500 text-sm">
+            No articles found for this section yet.
+        </div>
+        {% endfor %}
+    </div>
+
+    {% if pagination.pages > 1 %}
+    <nav class="flex justify-center items-center space-x-2 pt-8 border-t border-gray-100">
+        {% if pagination.has_prev %}
+        <a href="{{ url_for('articles_list', page=pagination.prev_num, category=request.args.get('category'), tag=request.args.get('tag')) }}" class="px-3 py-1 text-xs font-semibold border rounded text-gray-700 hover:bg-gray-50">&larr; Previous</a>
+        {% endif %}
+        
+        <span class="text-xs text-gray-500 px-2">Page {{ pagination.page }} of {{ pagination.pages }}</span>
+
+        {% if pagination.has_next %}
+        <a href="{{ url_for('articles_list', page=pagination.next_num, category=request.args.get('category'), tag=request.args.get('tag')) }}" class="px-3 py-1 text-xs font-semibold border rounded text-gray-700 hover:bg-gray-50">Next &rarr;</a>
+        {% endif %}
+    </nav>
+    {% endif %}
+</div>
+{% endblock %}

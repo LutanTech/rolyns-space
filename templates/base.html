@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{{ site_name }} — Personal Publication{% endblock %}</title>
+    <meta name="description" content="{% block meta_description %}Ideas, stories, technology and everything in between.{% endblock %}">
+    
+    <link rel="canonical" href="https://{{ domain }}{{ request.path }}">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              spaceGreen: {
+                50: '#e6faf1',
+                100: '#c1f2dc',
+                500: '#7cffcb',
+                600: '#10b981',
+                700: '#059669',
+                900: '#064e3b',
+              },
+              spaceRed: {
+                500: '#ef4444',
+                600: '#dc2626',
+              }
+            },
+            borderRadius: {
+              DEFAULT: '0.25rem',
+              sm: '0.125rem',
+              md: '0.25rem',
+              lg: '0.375rem',
+            }
+          }
+        }
+      }
+    </script>
+    <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Person",
+      "name": "Jerry Rolyns",
+      "url": "https://{{ domain }}"
+    }
+    </script>
+</head>
+<body class="bg-white text-gray-900 min-h-screen flex flex-col font-sans antialiased selection:bg-[#7cffcb] selection:text-gray-900">
+
+    <header class="bg-white border-b-2 border-[#7cffcb] relative">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+            <a href="{{ url_for('index') }}" class="flex items-center space-x-3 group">
+                <div class="w-10 h-10 bg-[#7cffcb] text-gray-900 font-bold flex items-center justify-center rounded text-lg shadow-sm">
+                    J
+                </div>
+                <div class="flex flex-col">
+                    <span class="text-lg font-bold tracking-tight text-gray-900 leading-tight group-hover:text-spaceGreen-700 transition">Jerry Rolyns Space</span>
+                    <span class="text-[10px] tracking-widest text-spaceGreen-700 font-bold uppercase">Personal Publication</span>
+                </div>
+            </a>
+            
+            <nav class="hidden md:flex space-x-8 text-sm font-semibold">
+                <a href="{{ url_for('index') }}" class="text-spaceGreen-700 transition">Home</a>
+                <a href="{{ url_for('articles_list') }}" class="text-gray-600 hover:text-spaceGreen-700 transition">Articles</a>
+                <a href="{{ url_for('categories_list') }}" class="text-gray-600 hover:text-spaceGreen-700 transition">Categories</a>
+                <a href="{{ url_for('about') }}" class="text-gray-600 hover:text-spaceGreen-700 transition">About</a>
+                <a href="{{ url_for('contact') }}" class="text-gray-600 hover:text-spaceGreen-700 transition">Contact</a>
+            </nav>
+
+            <div class="flex items-center space-x-2 sm:space-x-3">
+                <a href="{{ url_for('search') }}" class="p-2 text-gray-600 hover:text-spaceGreen-700 transition" aria-label="Search">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                </a>
+                <button id="mobile-menu-btn" type="button" class="md:hidden p-2 text-gray-600 hover:text-spaceGreen-700 focus:outline-none focus:ring-2 focus:ring-[#7cffcb] rounded" aria-label="Toggle Navigation">
+                    <i id="menu-icon-open" class="fa-solid fa-bars text-xl"></i>
+                    <i id="menu-icon-close" class="fa-solid fa-xmark text-xl hidden"></i>
+                </button>
+            </div>
+        </div>
+
+        <div id="mobile-menu" class="hidden md:hidden border-t border-gray-100 bg-white px-4 pt-2 pb-6 space-y-3 shadow-lg">
+            <a href="{{ url_for('index') }}" class="block px-3 py-2 rounded-md text-base font-semibold text-spaceGreen-700 bg-spaceGreen-50">Home</a>
+            <a href="{{ url_for('articles_list') }}" class="block px-3 py-2 rounded-md text-base font-semibold text-gray-600 hover:text-spaceGreen-700 hover:bg-gray-50 transition">Articles</a>
+            <a href="{{ url_for('categories_list') }}" class="block px-3 py-2 rounded-md text-base font-semibold text-gray-600 hover:text-spaceGreen-700 hover:bg-gray-50 transition">Categories</a>
+            <a href="{{ url_for('about') }}" class="block px-3 py-2 rounded-md text-base font-semibold text-gray-600 hover:text-spaceGreen-700 hover:bg-gray-50 transition">About</a>
+            <a href="{{ url_for('contact') }}" class="block px-3 py-2 rounded-md text-base font-semibold text-gray-600 hover:text-spaceGreen-700 hover:bg-gray-50 transition">Contact</a>
+        </div>
+    </header>
+
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            <div class="mb-6 space-y-2">
+              {% for category, message in messages %}
+                <div class="p-4 rounded border text-sm font-medium {% if category == 'success' %}bg-spaceGreen-50 text-spaceGreen-900 border-spaceGreen-200{% else %}bg-red-50 text-red-900 border-red-200{% endif %}">
+                  {{ message }}
+                </div>
+              {% endfor %}
+            </div>
+          {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="bg-white border-t-2 border-[#7cffcb] mt-20">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 grid grid-cols-1 md:grid-cols-2 gap-12">
+            <div class="space-y-4">
+                <div class="flex items-center space-x-3">
+                    <div class="w-8 h-8 bg-[#7cffcb] text-gray-900 font-bold flex items-center justify-center rounded text-sm">
+                        J
+                    </div>
+                    <span class="text-base font-bold text-gray-900">Jerry Rolyns Space</span>
+                </div>
+                <p class="text-sm text-gray-600 leading-relaxed pr-4">
+                    Ideas, stories, technology and everything in between. A clean, independent publishing platform built for thoughtful writing and long-form essays.
+                </p>
+                <div class="flex space-x-4 text-spaceGreen-700 pt-2">
+                    <a href="https://github.com" target="_blank" rel="noopener" class="hover:text-spaceGreen-900 transition" aria-label="GitHub"><i class="fa-brands fa-github text-lg"></i></a>
+                    <a href="https://linkedin.com" target="_blank" rel="noopener" class="hover:text-spaceGreen-900 transition" aria-label="LinkedIn"><i class="fa-brands fa-linkedin text-lg"></i></a>
+                    <a href="{{ url_for('rss_feed') }}" class="hover:text-spaceGreen-900 transition" aria-label="RSS Feed"><i class="fa-solid fa-rss text-lg"></i></a>
+                </div>
+            </div>
+
+            <div>
+                <h4 class="text-xs font-bold uppercase tracking-widest text-spaceGreen-700 mb-4">Navigation</h4>
+                <ul class="space-y-3 text-sm">
+                    <li><a href="{{ url_for('index') }}" class="text-gray-600 hover:text-spaceGreen-700 transition">Home</a></li>
+                    <li><a href="{{ url_for('articles_list') }}" class="text-gray-600 hover:text-spaceGreen-700 transition">Articles</a></li>
+                    <li><a href="{{ url_for('categories_list') }}" class="text-gray-600 hover:text-spaceGreen-700 transition">Categories</a></li>
+                    <li><a href="{{ url_for('about') }}" class="text-gray-600 hover:text-spaceGreen-700 transition">About Jerry</a></li>
+                    <li><a href="{{ url_for('contact') }}" class="text-gray-600 hover:text-spaceGreen-700 transition">Contact</a></li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="border-t border-gray-100 py-6">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between text-xs text-gray-500 space-y-2 sm:space-y-0">
+                <p>&copy; 2026 <strong class="text-spaceGreen-700">Jerry Rolyns Space</strong>. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+        const mobileMenu = document.getElementById('mobile-menu');
+        const menuIconOpen = document.getElementById('menu-icon-open');
+        const menuIconClose = document.getElementById('menu-icon-close');
+
+        if (mobileMenuBtn && mobileMenu) {
+            mobileMenuBtn.addEventListener('click', () => {
+                mobileMenu.classList.toggle('hidden');
+                menuIconOpen.classList.toggle('hidden');
+                menuIconClose.classList.toggle('hidden');
+            });
+        }
+    </script>
+</body>
+</html>

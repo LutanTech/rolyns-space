@@ -1,0 +1,95 @@
+<!-- templates/article_detail.html -->
+{% extends "base.html" %}
+
+{% block title %}{{ article.title }} — {{ site_name }}{% endblock %}
+{% block meta_description %}{{ article.summary }}{% endblock %}
+
+{% block content %}
+<article class="max-w-4xl mx-auto space-y-8">
+    <header class="space-y-4 text-center border-b border-gray-100 pb-8">
+        <div class="flex items-center justify-center space-x-2 text-xs font-semibold text-[#7cffcb]">
+            <a href="{{ url_for('articles_list', category=article.category.slug) }}" class="hover:underline uppercase tracking-wider">{{ article.category.name }}</a>
+            <span class="text-gray-300">&bull;</span>
+            <span class="text-gray-500">{{ article.published_at.strftime('%B %d, %Y') }}</span>
+            <span class="text-gray-300">&bull;</span>
+            <span class="text-gray-500">{{ article.reading_time }} min read</span>
+        </div>
+        
+        <h1 class="text-3xl sm:text-4xl font-extrabold text-gray-900 leading-tight">
+            {{ article.title }}
+        </h1>
+
+        <p class="text-lg text-gray-600 max-w-2xl mx-auto leading-relaxed">
+            {{ article.summary }}
+        </p>
+
+        {% if article.featured_image %}
+        <div class="pt-4">
+            <img src="{{ article.featured_image }}" alt="{{ article.title }}" class="w-full h-auto max-h-[480px] object-cover rounded-lg shadow-xs">
+        </div>
+        {% endif %}
+    </header>
+
+    <div class="prose max-w-none text-gray-800 leading-relaxed space-y-6">
+        {{ article.content_html|safe }}
+    </div>
+
+    {% if article.tags %}
+    <div class="pt-6 border-t border-gray-100 flex flex-wrap gap-2">
+        {% for tag in article.tags %}
+        <a href="{{ url_for('articles_list', tag=tag.slug) }}" class="px-3 py-1 bg-gray-100 hover:bg-gray-200 text-xs font-medium text-gray-700 rounded-full transition">
+            #{{ tag.name }}
+        </a>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <nav class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-8 border-t border-gray-100 text-sm">
+        {% if prev_article %}
+        <a href="{{ url_for('article_detail', slug=prev_article.slug) }}" class="p-4 border rounded hover:border-[#7cffcb] transition space-y-1 block">
+            <span class="text-[10px] uppercase font-bold text-gray-400 block">&larr; Previous Article</span>
+            <span class="font-semibold text-gray-900 block truncate">{{ prev_article.title }}</span>
+        </a>
+        {% else %}
+        <div></div>
+        {% endif %}
+
+        {% if next_article %}
+        <a href="{{ url_for('article_detail', slug=next_article.slug) }}" class="p-4 border rounded hover:border-[#7cffcb] transition space-y-1 block text-right">
+            <span class="text-[10px] uppercase font-bold text-gray-400 block">Next Article &rarr;</span>
+            <span class="font-semibold text-gray-900 block truncate">{{ next_article.title }}</span>
+        </a>
+        {% endif %}
+    </nav>
+
+    <section class="pt-12 border-t border-gray-100 space-y-8">
+        <h3 class="text-xl font-bold text-gray-900">Comments ({{ comments|length }})</h3>
+
+        <form action="{{ url_for('add_comment', slug=article.slug) }}" method="POST" class="p-6 bg-gray-50 rounded-lg space-y-4 border border-gray-100">
+            <h4 class="text-sm font-bold text-gray-900 uppercase tracking-wider">Leave a Comment</h4>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <input type="text" name="author_name" placeholder="Your Name" required class="px-4 py-2 text-xs border border-gray-200 rounded focus:outline-none focus:border-[#7cffcb]">
+                <input type="email" name="author_email" placeholder="Your Email" required class="px-4 py-2 text-xs border border-gray-200 rounded focus:outline-none focus:border-[#7cffcb]">
+            </div>
+            <textarea name="content" rows="4" placeholder="Your comment..." required class="w-full px-4 py-2 text-xs border border-gray-200 rounded focus:outline-none focus:border-[#7cffcb]"></textarea>
+            <button type="submit" class="px-6 py-2 bg-[#7cffcb] text-gray-900 text-xs font-bold rounded hover:opacity-90 transition">
+                Submit Comment
+            </button>
+        </form>
+
+        <div class="space-y-4">
+            {% for comment in comments %}
+            <div class="p-4 bg-white border border-gray-100 rounded space-y-2">
+                <div class="flex justify-between items-center text-xs">
+                    <span class="font-bold text-gray-900">{{ comment.author_name }}</span>
+                    <span class="text-gray-400">{{ comment.created_at.strftime('%b %d, %Y') }}</span>
+                </div>
+                <p class="text-xs text-gray-700 leading-relaxed">{{ comment.content }}</p>
+            </div>
+            {% else %}
+            <p class="text-xs text-gray-500 italic">No comments yet. Be the first to share your thoughts!</p>
+            {% endfor %}
+        </div>
+    </section>
+</article>
+{% endblock %}
