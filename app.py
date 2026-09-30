@@ -283,6 +283,21 @@ def create_app(config_class=Config):
             domain=app.config['DOMAIN'],
             global_categories=categories
         )
+        
+        
+    from flask import make_response, send_from_directory
+    from pathlib import Path
+
+    @app.get("/service-worker.js")
+    def service_worker():
+        response = make_response(
+            send_from_directory(Path(app.static_folder), "service-worker.js")
+        )
+        response.headers["Service-Worker-Allowed"] = "/"
+        response.headers["Content-Type"] = "application/javascript; charset=utf-8"
+        response.headers["Cache-Control"] = "no-cache"
+        return response
+
 
     @app.route('/')
     def index():
