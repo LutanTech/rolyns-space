@@ -12,7 +12,61 @@
         <a href="{{ url_for('admin.dashboard') }}" class="text-xs text-gray-500 hover:underline">&larr; Back to Dashboard</a>
     </div>
 
-    <form method="POST" enctype="multipart/form-data" class="space-y-6">
+    <div class="bg-white border border-gray-100 rounded-lg p-4 space-y-3">
+        <div class="text-xs text-gray-500 font-medium">Get Image Link</div>
+        <form id="getImageLinkForm">
+            <input type="file" id="fileInput" accept="image/*" class="hidden">
+            <div id="previewContainer" class="relative hidden">
+                <img id="previewImage" class="w-full max-h-64 object-contain rounded border border-gray-100">
+                <button type="submit" id="uploadButton" class="absolute bottom-3 right-3 px-4 py-2 bg-[#7cffcb] text-gray-900 text-xs font-bold rounded">
+                    <i class="fas fa-upload"></i> Upload
+                </button>
+            </div>
+            <button type="button" id="browseButton" class="px-4 py-2 bg-[#7cffcb] text-gray-900 text-xs font-bold rounded">
+                <i class="fas fa-file-upload"></i> Browse
+            </button>
+        </form>
+        <div class="flex gap-2">
+            <input id="imageLink" readonly class="flex-1 px-3 py-2 text-xs bg-gray-50 border border-gray-100 rounded">
+            <button type="button" id="copyButton" class="px-4 py-2 bg-[#7cffcb] text-gray-900 text-xs font-bold rounded"><i class="fas fa-copy"></i> Copy</button>
+        </div>
+    </div>
+    
+    <script>
+    const form=document.getElementById('getImageLinkForm'),input=document.getElementById('fileInput'),preview=document.getElementById('previewImage'),container=document.getElementById('previewContainer'),browse=document.getElementById('browseButton'),upload=document.getElementById('uploadButton'),link=document.getElementById('imageLink'),copy=document.getElementById('copyButton')
+    
+    browse.onclick=()=>input.click()
+    
+    input.onchange=()=>{
+        if(!input.files[0])return
+        preview.src=URL.createObjectURL(input.files[0])
+        container.classList.remove('hidden')
+        browse.classList.add('hidden')
+    }
+    
+    form.onsubmit=e=>{
+        e.preventDefault()
+        if(!input.files[0])return input.click()
+        const reader=new FileReader()
+        upload.disabled=true
+        upload.innerHTML='<i class="fas fa-spinner fa-spin"></i> Uploading'
+        reader.onload=e=>fetch('{{ url_for("admin.upload_image") }}',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({base64Image:e.target.result})})
+        .then(r=>r.json()).then(data=>{if(data.success)link.value=location.origin+data.url;else alert(data.error||'Upload failed')})
+        .catch(()=>alert('Upload failed')).finally(()=>{upload.disabled=false;upload.innerHTML='<i class="fas fa-upload"></i> Upload'})
+        reader.readAsDataURL(input.files[0])
+    }
+    
+    copy.onclick=()=>{
+        if(!link.value)return
+        navigator.clipboard.writeText(link.value)
+        copy.innerHTML='<i class="fas fa-check"></i> Copied'
+        setTimeout(()=>copy.innerHTML='<i class="fas fa-copy"></i> Copy',1500)
+    }
+    </script>
+
+
+        <form method="POST" enctype="multipart/form-data" class="space-y-6">
+        
         <div>
             <label class="block text-xs font-bold uppercase text-gray-700 mb-1">Title</label>
             <input type="text" name="title" value="{{ article.title if article else '' }}" required class="w-full px-4 py-2 text-sm border border-gray-200 rounded focus:outline-none focus:border-[#7cffcb]">

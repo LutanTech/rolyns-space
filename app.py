@@ -1,3 +1,4 @@
+from flask import current_app
 import os
 import math
 import datetime
@@ -11,13 +12,15 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 import markdown2
 from slugify import slugify
+import base64
+import uuid
 
 # ==========================================
 # 1. CONFIGURATION
 # ==========================================
 class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY', 'dev-key-jerry-space-2026-change-in-prod')
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL', 'sqlite:///db.sqlite3')
+    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL', 'sqlite:///rolynsspace.db')
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static/uploads')
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024
@@ -106,6 +109,14 @@ class Subscriber(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(120), unique=True, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
+    
+class Message(db.Model):
+    __tablename__ = 'messages'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    email = db.Column(db.String(120), nullable=False)
+    message = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
 
 
 # ==========================================
@@ -124,8 +135,30 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+
+def upload_image(filename):
+    if not filename:
+        return None
+    upload_path = os.path.join(Config.UPLOAD_FOLDER, filename)
+    return f"/static/uploads/{filename}"
+
+@admin_bp.route('/upload_image',methods=['POST'])
+@login_required
+def upload_image():
+    data=request.get_json()
+    image=data.get('base64Image')
+    if not image:return jsonify({'error':'No base64 image provided'}),400
+    try:
+        filename=f"{uuid.uuid4()}.png"
+        with open(os.path.join(Config.UPLOAD_FOLDER,filename),'wb') as f:f.write(base64.b64decode(image.split(',',1)[-1]))
+        return jsonify({'success':True,'url':f"/static/uploads/{filename}"})
+    except Exception as e:
+        return jsonify({'error':str(e)}),500
+
 @admin_bp.route('/login', methods=['GET', 'POST'])
 def login():
+    if session:
+        return redirect(url_for('admin.dashboard'))
     if request.method == 'POST':
         username = request.form.get('username')
         password = request.form.get('password')
@@ -137,6 +170,22 @@ def login():
             return redirect(url_for('admin.dashboard'))
         flash('Invalid username or password.', 'error')
     return render_template('admin/login.html')
+
+
+@admin_bp.errorhandler(404)
+def page_not_found(e):
+    return render_template('errors/404.html'), 404
+
+@admin_bp.errorhandler(500)
+def internal_server_error(e):
+    return render_template('errors/500.html'), 500
+
+
+@admin_bp.route('/messages')
+@login_required
+def messages():
+    messages = Message.query.order_by(Message.created_at.desc()).all()
+    return render_template('admin/messages.html', messages=messages)
 
 @admin_bp.route('/logout')
 def logout():
@@ -150,6 +199,7 @@ def dashboard():
     total_articles = Article.query.count()
     total_comments = Comment.query.count()
     total_subscribers = Subscriber.query.count()
+    total_messages = Message.query.count()
     articles = Article.query.order_by(Article.created_at.desc()).all()
     comments = Comment.query.order_by(Comment.created_at.desc()).limit(10).all()
     categories = Category.query.all()
@@ -157,6 +207,7 @@ def dashboard():
                            total_articles=total_articles,
                            total_comments=total_comments,
                            total_subscribers=total_subscribers,
+                           total_messages=total_messages,
                            articles=articles,
                            comments=comments,
                            categories=categories)
@@ -274,6 +325,14 @@ def create_app(config_class=Config):
     
     db.init_app(app)
     app.register_blueprint(admin_bp)
+    
+    @app.errorhandler(404)
+    def page_not_found(e):
+        return render_template('errors/404.html'), 404
+    
+    @app.errorhandler(500)
+    def internal_server_error(e):
+        return render_template('errors/500.html'), 500
 
     @app.context_processor
     def inject_global_vars():
@@ -423,6 +482,12 @@ def create_app(config_class=Config):
     @app.route('/contact', methods=['GET', 'POST'])
     def contact():
         if request.method == 'POST':
+            name = request.form.get('name')
+            email = request.form.get('email')
+            message = request.form.get('message')
+            message = Message(name=name, email=email, message=message)
+            db.session.add(message)
+            db.session.commit()
             flash('Message received! Jerry will get back to you soon.', 'success')
             return redirect(url_for('contact'))
         return render_template('contact.html')
@@ -461,19 +526,42 @@ def create_app(config_class=Config):
 
     return app
 
+
 def init_db(app):
     with app.app_context():
         db.create_all()
-        if not Category.query.first():
+        if db.session.query(Category).count() == 0:
             default_categories = [
-                ('Technology', 'Insights into systems, tech ecosystems, and hardware.'),
-                ('Web Development', 'Practical guides, full-stack tools, and modern frameworks.'),
-                ('Life', 'Reflections on experiences, balance, and human connections.'),
-                ('Ideas', 'Abstract concepts, future predictions, and thought experiments.'),
-                ('Stories', 'Narratives, personal anecdotes, and creative journeys.'),
-                ('Tutorials', 'Step-by-step walkthroughs to build real software.'),
-                ('Productivity', 'Systems, tools, and habits for focused execution.'),
-                ('Digital World', 'Analysis of digital culture, open source, and privacy.')
+                ('Technology', 'Insights into systems, tech ecosystems and hardware.'),
+                ('Life', 'Reflections on experiences, balance and human connections.'),
+                ('Ideas', 'Abstract concepts, future predictions and thought experiments.'),
+                ('Stories', 'Narratives, personal anecdotes and creative journeys.'),
+                ('Tutorials', 'Step-by-step walkthroughs to build real life projects.'),
+                ('Productivity', 'Systems, tools and habits for focused execution.'),
+                ('Health', 'Physical, mental and emotional well-being.'),
+                ('Finance', 'Personal finance, investing and economic insights.'),
+                ('Digital World', 'Analysis of digital culture, open source and privacy.'),
+                ('Science', 'Research, discoveries and scientific advancements.'),
+                ('Art', 'Creative expression, design and visual arts.'),
+                ('Music', 'Reviews, recommendations and musical analysis.'),
+                ('Books', 'Reviews, recommendations and literary analysis.'),
+                ('Movies', 'Reviews, recommendations and film analysis.'),
+                ('TV', 'Reviews, recommendations and TV show analysis.'),
+                ('Food', 'Reviews, recommendations and food analysis.'),
+                ('Politics', 'Analysis of political systems, policies and global affairs.'),
+                ('History', 'Analysis of historical events, trends and cultural heritage.'),
+                ('Philosophy', 'Analysis of philosophical concepts, theories and ideas.'),
+                ('Religion', 'Analysis of religious beliefs, practices and spiritual experiences.'),
+                ('Social Sciences', 'Analysis of social structures, human behavior and societal dynamics.'),
+                ('Environment', 'Analysis of environmental issues, sustainability and conservation efforts.'),
+                ('Travel', 'Analysis of travel destinations, experiences and cultural insights.'),
+                ('Fashion', 'Analysis of fashion trends, styles and cultural influences.'),
+                ('Gaming', 'Reviews, recommendations and gaming analysis.'),
+                ('Sports', 'Reviews, recommendations and sports analysis.'),
+                ('Soccer', 'Reviews, recommendations and soccer analysis.'),
+                ('Story Telling', 'Reviews, recommendations and story telling analysis.'),
+                ('Investing', 'Reviews, recommendations and investing analysis.'),
+                ('Media', 'Reviews, recommendations and media analysis.'),
             ]
             for name, desc in default_categories:
                 cat = Category(name=name, slug=slugify(name), description=desc)
@@ -484,7 +572,7 @@ def init_db(app):
             admin_user = User(
                 username='jerry',
                 email='jerry@tunupublishers.com',
-                bio='Writer, software engineer, and creator of Jerry Rolyns Space.'
+                bio='Writer, editor and creator of Jerry Rolyns Space.'
             )
             admin_user.set_password('jerryspace2026')
             db.session.add(admin_user)

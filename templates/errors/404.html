@@ -1,0 +1,25 @@
+<!-- templates/404.html -->
+{% extends "base.html" %}
+
+{% block title %}Page Not Found — {{ site_name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-md mx-auto my-16 text-center space-y-6">
+    <div class="space-y-2">
+        <h1 class="text-7xl font-extrabold text-[#7cffcb] tracking-tight">404</h1>
+        <h2 class="text-xl font-bold text-gray-900 uppercase tracking-wider">Page Not Found</h2>
+        <p class="text-xs text-gray-600 leading-relaxed">
+            The page or article you are looking for does not exist, has been removed, or moved to a different URL.
+        </p>
+    </div>
+
+    <div class="pt-4 flex flex-col sm:flex-row items-center justify-center gap-3">
+        <a href="{{ url_for('index') }}" class="w-full sm:w-auto px-6 py-2.5 bg-[#7cffcb] text-gray-900 text-xs font-bold rounded hover:opacity-90 transition">
+            Back to Home
+        </a>
+        <a href="{{ url_for('articles_list') }}" class="w-full sm:w-auto px-6 py-2.5 border border-gray-200 text-gray-700 text-xs font-bold rounded hover:bg-gray-50 transition">
+            Browse Articles
+        </a>
+    </div>
+</div>
+{% endblock %}

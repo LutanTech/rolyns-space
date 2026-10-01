@@ -17,6 +17,9 @@
             <a href="{{ url_for('admin.logout') }}" class="px-4 py-2 border border-gray-200 text-gray-600 text-xs font-bold rounded hover:bg-gray-50 transition">
                 Logout
             </a>
+            <a href="{{ url_for('admin.messages') }}" class="px-4 py-2 border border-gray-200 text-gray-600 text-xs font-bold rounded hover:bg-gray-50 transition">
+                Messages ({{ total_messages }})
+            </a>
         </div>
     </div>
 
@@ -33,7 +36,13 @@
             <span class="text-xs text-gray-500 font-medium">Subscribers</span>
             <div class="text-2xl font-bold text-gray-900">{{ total_subscribers }}</div>
         </div>
+        <div class="p-6 bg-white border border-gray-100 rounded space-y-1">
+            <span class="text-xs text-gray-500 font-medium">Messages</span>
+            <div class="text-2xl font-bold text-gray-900">{{ total_messages }}</div>
+        </div>
+
     </div>
+
 
     <div class="space-y-4">
         <h2 class="text-lg font-bold text-gray-900">Articles</h2>
@@ -58,7 +67,7 @@
                                 {{ article.status }}
                             </span>
                         </td>
-                        <td class="p-3">{{ article.views_count }}</td>
+                        <td class="p-3">{{ "{:,}".format(article.views_count or 0) }}</td>
                         <td class="p-3 text-right space-x-2">
                             <a href="{{ url_for('admin.article_edit', id=article.id) }}" class="text-[#7cffcb] font-bold hover:underline">Edit</a>
                             <form action="{{ url_for('admin.article_delete', id=article.id) }}" method="POST" class="inline" onsubmit="return confirm('Delete article?');">

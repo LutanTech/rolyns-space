@@ -13,7 +13,31 @@
             <span class="text-gray-500">{{ article.published_at.strftime('%B %d, %Y') }}</span>
             <span class="text-gray-300">&bull;</span>
             <span class="text-gray-500">{{ article.reading_time }} min read</span>
+            <span class="text-blue-500 hidden url"> 
+             </span>
+             <span class="text-gray-300">&bull;</span>
+
+             <span class="text-blue-500 cursor-pointer hover:outline p-1 hover:rounded hover:outline-blue-600" onclick="shareLink()">
+                <i class="fas fa-share-alt"></i> Share Link
+            </span>
+            
+            <script>
+            function shareLink(){
+                const url=document.querySelector('.url').innerText.trim()
+                if(navigator.share)navigator.share({title:document.title,url})
+                else navigator.clipboard.writeText(url).then(()=>alert('Link copied to clipboard'))
+            }
+            </script>
+
         </div>
+
+        <script>
+            document.addEventListener('DOMContentLoaded', ()=>{
+                const url = window.location.href
+
+                document.querySelector('.url').innerHTML = url
+            })
+        </script>
         
         <h1 class="text-3xl sm:text-4xl font-extrabold text-gray-900 leading-tight">
             {{ article.title }}
