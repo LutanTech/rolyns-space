@@ -157,7 +157,7 @@ def upload_image():
 
 @admin_bp.route('/login', methods=['GET', 'POST'])
 def login():
-    if session:
+    if session['user_id'] and session['username']:
         return redirect(url_for('admin.dashboard'))
     if request.method == 'POST':
         username = request.form.get('username')
