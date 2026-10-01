@@ -102,7 +102,7 @@
             <a href="{{ url_for('about') }}" class="block px-3 py-2 rounded-md text-base font-semibold text-gray-600 hover:text-spaceGreen-700 hover:bg-gray-50 transition">About</a>
             <a href="{{ url_for('contact') }}" class="block px-3 py-2 rounded-md text-base font-semibold text-gray-600 hover:text-spaceGreen-700 hover:bg-gray-50 transition">Contact</a>
             {% if session.get('username') %}
-            <a href="{{ url_for('admin.dashboard') }}" class="block px-3 py-2 rounded-md text-base font-semibold text-gray-600 hover:text-spaceGreen-700 hover:bg-gray-50 transition">Contact</a>
+            <a href="{{ url_for('admin.dashboard') }}" class="block px-3 py-2 rounded-md text-base font-semibold text-gray-600 hover:text-spaceGreen-700 hover:bg-gray-50 transition">Dashboard</a>
                 {% endif %}
         </div>
     </header>
