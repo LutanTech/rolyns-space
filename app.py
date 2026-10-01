@@ -154,23 +154,25 @@ def upload_image():
         return jsonify({'success':True,'url':f"/static/uploads/{filename}"})
     except Exception as e:
         return jsonify({'error':str(e)}),500
-
-@admin_bp.route('/login', methods=['GET', 'POST'])
+@admin_bp.route('/login',methods=['GET','POST'])
 def login():
-    if session and session['user_id'] and session['username']:
+    if session.get('user_id') and session.get('username'):
         return redirect(url_for('admin.dashboard'))
-    if request.method == 'POST':
-        username = request.form.get('username')
-        password = request.form.get('password')
-        user = User.query.filter_by(username=username).first()
-        if user and user.check_password(password):
-            session['user_id'] = user.id
-            session['username'] = user.username
-            flash('Logged in successfully.', 'success')
-            return redirect(url_for('admin.dashboard'))
-        flash('Invalid username or password.', 'error')
-    return render_template('admin/login.html')
 
+    if request.method=='POST':
+        username=request.form.get('username')
+        password=request.form.get('password')
+        user=User.query.filter_by(username=username).first()
+
+        if user and user.check_password(password):
+            session['user_id']=user.id
+            session['username']=user.username
+            flash('Logged in successfully.','success')
+            return redirect(url_for('admin.dashboard'))
+
+        flash('Invalid username or password.','error')
+
+    return render_template('admin/login.html')
 
 @admin_bp.errorhandler(404)
 def page_not_found(e):
