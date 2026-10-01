@@ -12,6 +12,8 @@
     <link rel="icon" type="image/png" sizes="192x192" href="{{ url_for('static', filename='icons/icon-192.png') }}">
     <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/apple-touch-icon.png') }}">
     <title>{% block title %}{{ site_name }} — Personal Publication{% endblock %}</title>
+
+    {% block meta_twitter %} {% endblock%}
     <meta name="description" content="{% block meta_description %}Ideas, stories, technology and everything in between.{% endblock %}">
     
     <link rel="canonical" href="https://{{ domain }}{{ request.path }}">

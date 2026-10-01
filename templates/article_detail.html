@@ -4,6 +4,20 @@
 {% block title %}{{ article.title }} — {{ site_name }}{% endblock %}
 {% block meta_description %}{{ article.summary }}{% endblock %}
 
+{% block meta_twitter %}
+<meta property="og:title" content="{{ article.title }}">
+<meta property="og:description" content="{{ article.summary }}">
+<meta property="og:image" content="{{ request.url_root.rstrip('/') }}{{ article.featured_image }}">
+<meta property="og:url" content="{{ request.url }}">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="{{ site_name }}">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="{{ article.title }}">
+<meta name="twitter:description" content="{{ article.summary }}">
+<meta name="twitter:image" content="{{ request.url_root.rstrip('/') }}{{ article.featured_image }}">
+{% endblock %}
+
+
 {% block content %}
 <article class="max-w-4xl mx-auto space-y-8">
     <header class="space-y-4 text-center border-b border-gray-100 pb-8">
