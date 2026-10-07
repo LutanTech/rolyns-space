@@ -6,9 +6,12 @@
 {% block content %}
 <div class="space-y-8">
     <div class="flex items-center justify-between border-b border-gray-100 pb-6">
-        <div>
+        <div class="flex gap-4 items-center">
+            <div><img src="{{ session.get('photo') or 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQz3XbgqPWjpcGeuSXJJq-pOo7acTbDktc7FYvWsLVSUeu3FVFMOxUdOvcj&s=10'}}" class="w-9 h-9 rounded-full"></div>
+            <div>
             <h1 class="text-2xl font-bold text-gray-900">Admin Dashboard</h1>
             <p class="text-xs text-gray-500">Manage publications, comments and site stats.</p>
+            </div>
         </div>
         <div class="flex items-center space-x-3">
             <a href="{{ url_for('admin.article_create') }}" class="px-4 py-2 bg-[#7cffcb] text-gray-900 text-xs font-bold rounded hover:opacity-90 transition">

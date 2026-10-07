@@ -21,6 +21,9 @@
                 <button type="submit" id="uploadButton" class="absolute bottom-3 right-3 px-4 py-2 bg-[#7cffcb] text-gray-900 text-xs font-bold rounded">
                     <i class="fas fa-upload"></i> Upload
                 </button>
+                <button type="button" id="resetButton" class="absolute bottom-[70px] right-3 px-4 py-2 bg-red-500 text-white text-xs font-bold rounded">
+                    <i class="fas fa-history"></i> Reset
+                </button>
             </div>
             <button type="button" id="browseButton" class="px-4 py-2 bg-[#7cffcb] text-gray-900 text-xs font-bold rounded">
                 <i class="fas fa-file-upload"></i> Browse
@@ -33,7 +36,7 @@
     </div>
     
     <script>
-    const form=document.getElementById('getImageLinkForm'),input=document.getElementById('fileInput'),preview=document.getElementById('previewImage'),container=document.getElementById('previewContainer'),browse=document.getElementById('browseButton'),upload=document.getElementById('uploadButton'),link=document.getElementById('imageLink'),copy=document.getElementById('copyButton')
+    const form=document.getElementById('getImageLinkForm'),input=document.getElementById('fileInput'),preview=document.getElementById('previewImage'),container=document.getElementById('previewContainer'),browse=document.getElementById('browseButton'),upload=document.getElementById('uploadButton'),reset=document.getElementById('resetButton'),link=document.getElementById('imageLink'),copy=document.getElementById('copyButton')
     
     browse.onclick=()=>input.click()
     
@@ -43,6 +46,15 @@
         container.classList.remove('hidden')
         browse.classList.add('hidden')
     }
+
+    reset.onclick =()=>{
+        input.value=''
+        preview.src=''
+        container.classList.add('hidden')
+        browse.classList.remove('hidden')
+
+    }
+
     
     form.onsubmit=e=>{
         e.preventDefault()

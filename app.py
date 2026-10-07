@@ -1,19 +1,39 @@
-from flask import current_app
-import os
-import math
+import base64
 import datetime
 from functools import wraps
-from flask import (
-    Flask, render_template, request, redirect, url_for, 
-    flash, jsonify, abort, Response, session
-)
-from flask_sqlalchemy import SQLAlchemy
-from werkzeug.security import generate_password_hash, check_password_hash
-from werkzeug.utils import secure_filename
-import markdown2
-from slugify import slugify
-import base64
+import hashlib
+import hmac
+import io
+import json
+import math
+import os
+import random
 import uuid
+
+from flask import current_app
+from flask import (
+    Flask,
+    Response,
+    abort,
+    flash,
+    jsonify,
+    redirect,
+    render_template,
+    request,
+    session,
+    url_for,
+)
+from flask import Blueprint
+from flask import current_app
+from flask_sqlalchemy import SQLAlchemy
+from google_auth_oauthlib.flow import Flow
+import markdown2
+import requests, string
+from slugify import slugify
+from sqlalchemy import func, or_
+from werkzeug.security import check_password_hash, generate_password_hash
+from werkzeug.utils import secure_filename
+
 
 # ==========================================
 # 1. CONFIGURATION
@@ -24,8 +44,37 @@ class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static/uploads')
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024
-    DOMAIN = 'jerry.tunupublishers.com'
+    DOMAIN = 'jerry.tunujournal.com'
     SITE_NAME = 'Jerry Rolyns Space'
+    
+    
+
+os.environ["OAUTHLIB_INSECURE_TRANSPORT"]="1"
+
+GOOGLE_CLIENT_SECRETS_FILE="client_secret.json"
+
+SCOPES=[
+    "openid",
+    "https://www.googleapis.com/auth/userinfo.email",
+    "https://www.googleapis.com/auth/userinfo.profile"
+]
+
+def generate_token(user_id,tkv):
+    return hmac.new(
+        app.secret_key.encode(),
+        f"{user_id}:{tkv}".encode(),
+        hashlib.sha256
+    ).hexdigest()
+
+
+def gen_id(prefix,length=10):
+    return prefix+"".join(
+        random.choices(
+            string.ascii_uppercase+string.digits,
+            k=length
+        )
+    )
+
 
 # ==========================================
 # 2. MODELS & DATABASE
@@ -40,9 +89,13 @@ article_tags = db.Table('article_tags',
 class User(db.Model):
     __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True)
+    google_id = db.Column(db.String(560))
     username = db.Column(db.String(64), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
-    password_hash = db.Column(db.String(256), nullable=False)
+    google_method = db.Column(db.Boolean, default=False)
+    is_active = db.Column(db.Boolean, default=True)
+    is_admin = db.Column(db.Boolean, default=False)
+    password_hash = db.Column(db.String(256), nullable=True)
     bio = db.Column(db.Text, nullable=True)
     avatar_url = db.Column(db.String(256), nullable=True)
     articles = db.relationship('Article', backref='author', lazy='dynamic')
@@ -98,10 +151,35 @@ class Comment(db.Model):
     __tablename__ = 'comments'
     id = db.Column(db.Integer, primary_key=True)
     article_id = db.Column(db.Integer, db.ForeignKey('articles.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     author_name = db.Column(db.String(100), nullable=False)
     author_email = db.Column(db.String(120), nullable=False)
     content = db.Column(db.Text, nullable=False)
     is_approved = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
+    
+
+class CommentReply(db.Model):
+    __tablename__ = 'replies'
+    id = db.Column(db.Integer, primary_key=True)
+    article_id = db.Column(db.Integer, db.ForeignKey('articles.id'), nullable=False)
+    comment_id = db.Column(db.Integer, db.ForeignKey('comments.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    author_name = db.Column(db.String(100), nullable=False)
+    author_email = db.Column(db.String(120), nullable=False)
+    content = db.Column(db.Text, nullable=False)
+    is_approved = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
+    
+    
+
+class Reaction(db.Model):
+    __tablename__ = 'reactions'
+    id = db.Column(db.Integer, primary_key=True)
+    article_id = db.Column(db.Integer, db.ForeignKey('articles.id'), nullable=False)
+    comment_id = db.Column(db.Integer, db.ForeignKey('comments.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    reaction_type = db.Column(db.Text, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
 
 class Subscriber(db.Model):
@@ -122,7 +200,7 @@ class Message(db.Model):
 # ==========================================
 # 3. ADMIN BLUEPRINT & AUTH LOGIC
 # ==========================================
-from flask import Blueprint
+
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
 
@@ -130,9 +208,21 @@ def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if 'user_id' not in session:
-            flash('Please log in to access the admin area.', 'error')
-            return redirect(url_for('admin.login'))
+            flash('Please log in to access the dashboard.', 'error')
+            return redirect(url_for('google.login'))
         return f(*args, **kwargs)
+    return decorated_function
+
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):       
+        user = User.query.filter_by(id=session.get('user_id')).first()
+
+        if not user or not user.is_admin:
+                flash('Unauthorized login', 'error')
+                return redirect(url_for('index'))
+        return f(*args, **kwargs)
+    
     return decorated_function
 
 
@@ -154,25 +244,7 @@ def upload_image():
         return jsonify({'success':True,'url':f"/static/uploads/{filename}"})
     except Exception as e:
         return jsonify({'error':str(e)}),500
-@admin_bp.route('/login',methods=['GET','POST'])
-def login():
-    if session.get('user_id') and session.get('username'):
-        return redirect(url_for('admin.dashboard'))
-
-    if request.method=='POST':
-        username=request.form.get('username')
-        password=request.form.get('password')
-        user=User.query.filter_by(username=username).first()
-
-        if user and user.check_password(password):
-            session['user_id']=user.id
-            session['username']=user.username
-            flash('Logged in successfully.','success')
-            return redirect(url_for('admin.dashboard'))
-
-        flash('Invalid username or password.','error')
-
-    return render_template('admin/login.html')
+    
 
 @admin_bp.errorhandler(404)
 def page_not_found(e):
@@ -197,6 +269,7 @@ def logout():
 
 @admin_bp.route('/')
 @login_required
+@admin_required
 def dashboard():
     total_articles = Article.query.count()
     total_comments = Comment.query.count()
@@ -295,6 +368,8 @@ def article_edit(id):
 
     return render_template('admin/editor.html', article=article, categories=categories)
 
+
+
 @admin_bp.route('/articles/<int:id>/delete', methods=['POST'])
 @login_required
 def article_delete(id):
@@ -304,20 +379,12 @@ def article_delete(id):
     flash('Article deleted.', 'success')
     return redirect(url_for('admin.dashboard'))
 
-@admin_bp.route('/comments/<int:id>/delete', methods=['POST'])
-@login_required
-def comment_delete(id):
-    comment = Comment.query.get_or_404(id)
-    db.session.delete(comment)
-    db.session.commit()
-    flash('Comment deleted.', 'success')
-    return redirect(url_for('admin.dashboard'))
 
 
 # ==========================================
 # 4. APPLICATION FACTORY & MAIN ROUTES
 # ==========================================
-from flask import current_app
+
 
 def create_app(config_class=Config):
     app = Flask(__name__)
@@ -358,6 +425,147 @@ def create_app(config_class=Config):
         response.headers["Content-Type"] = "application/javascript; charset=utf-8"
         response.headers["Cache-Control"] = "no-cache"
         return response
+
+    @app.route('/comments/<int:id>/delete', methods=['GET'])
+    @login_required
+    def comment_delete(id):
+        next_url = request.args.get('next') or request.referrer or '/'
+
+        comment = Comment.query.get_or_404(id)
+
+        if comment.user_id != session.get('user_id'):
+            flash('Unauthorized deletion. Logging suspicious activity.', 'error')
+            return redirect(next_url)
+
+        Reaction.query.filter_by(comment_id=comment.id).delete()
+
+        CommentReply.query.filter_by(comment_id=comment.id).delete()
+
+        db.session.delete(comment)
+        db.session.commit()
+
+        flash('Comment deleted.', 'success')
+        return redirect(next_url)
+
+    
+    @app.route("/google/login")
+    def google_login():
+        next_url=request.args.get("next")
+
+        if next_url:
+            session["google_next"]=next_url
+
+        flow=Flow.from_client_secrets_file(
+            GOOGLE_CLIENT_SECRETS_FILE,
+            scopes=SCOPES,
+            redirect_uri=url_for("callback",_external=True)
+        )
+
+        auth_url,state=flow.authorization_url(
+            prompt="consent",
+            access_type="offline",
+            include_granted_scopes="true"
+        )
+
+        session["google_state"]=state
+        session["google_code_verifier"]=flow.code_verifier
+
+        return redirect(auth_url)
+
+
+    
+    @app.route("/google/callback")
+    def callback():
+        if "google_state" not in session or "google_code_verifier" not in session:
+            flash("Google login session expired. Please try again.","error")
+            return redirect(url_for("home"))
+
+        flow=Flow.from_client_secrets_file(
+            GOOGLE_CLIENT_SECRETS_FILE,
+            scopes=SCOPES,
+            state=session["google_state"],
+            redirect_uri=url_for("callback",_external=True)
+        )
+
+        flow.code_verifier=session["google_code_verifier"]
+        flow.fetch_token(authorization_response=request.url)
+
+        credentials=flow.credentials
+
+        user_info=requests.get(
+            "https://www.googleapis.com/oauth2/v3/userinfo",
+            headers={"Authorization":f"Bearer {credentials.token}"}
+        ).json()
+
+        google_id=user_info["sub"]
+        email=user_info["email"].lower()
+        name=user_info.get("name") or email.split("@")[0]
+        photo=user_info.get("picture")
+
+        user=User.query.filter_by(email=email).first()
+
+        if not user:
+            user=User(
+                google_id=google_id,
+                email=email,
+                username=name,
+                avatar_url=photo,
+                google_method=True,
+            )
+            db.session.add(user)
+        elif not user.is_active:
+            flash("Your account has been suspended. Please contact support.","error")
+            return redirect(url_for("home"))
+        else:
+            user.google_id=google_id
+            user.username=name
+            user.avatar_url=photo
+            user.google_method=True
+
+        user.tkv=gen_id("TK",10)
+        db.session.commit()
+
+        token=generate_token(user.id,user.tkv)
+        session['user_id']=user.id
+        session['username']=user.username
+        session['photo']=user.avatar_url
+        session['user_email']=user.email
+        session['is_admin']=user.is_admin
+        session['token']=token
+
+        next_url=session.pop("google_next",None)
+
+        session.pop("google_state",None)
+        session.pop("google_code_verifier",None)
+
+        flash("Logged in Successfully","success")
+
+        return redirect(next_url)
+
+    @app.route('/login',methods=['GET','POST'])
+    def login():
+        if session.get('user_id') and session.get('username'):
+            return redirect(url_for('admin.dashboard'))
+
+        if request.method=='POST':
+            username=request.form.get('username')
+            password=request.form.get('password')
+            user=User.query.filter_by(username=username).first()
+
+            if user and user.check_password(password) and user.is_admin:
+                session['user_id']=user.id
+                session['username']=user.username
+                session['photo']=user.avatar_url
+                session['user_email']=user.email
+                session['is_admin']=user.is_admin
+                
+                flash('Logged in successfully.','success')
+                return redirect(url_for('admin.dashboard'))
+
+            flash('Invalid username or password.','error')
+
+        return render_template('login.html')
+
 
 
     @app.route('/')
@@ -426,7 +634,20 @@ def create_app(config_class=Config):
         ).order_by(Article.published_at.asc()).first()
         
         comments = article.comments.filter_by(is_approved=True).order_by(Comment.created_at.desc()).all()
-
+        
+        for comment in comments:
+            user = User.query.filter_by(email=comment.author_email).first()
+            replies=CommentReply.query.filter_by(comment_id=comment.id).order_by(CommentReply.created_at.desc()).all()
+            comment.photo = user.avatar_url
+            for reply in replies:
+                user = User.query.filter_by(id=reply.user_id).first()
+                reply.user=user
+    
+            comment.replies = replies
+            comment.likes = Reaction.query.filter_by(comment_id=comment.id, reaction_type='like').all()
+            comment.dislikes = Reaction.query.filter_by(comment_id=comment.id, reaction_type='dislike').all()
+            
+        
         return render_template('article_detail.html',
                                article=article,
                                related_articles=related_articles,
@@ -434,16 +655,52 @@ def create_app(config_class=Config):
                                next_article=next_article,
                                comments=comments)
 
+    @app.route('/share/comment/<int:id>')
+    def share_comment(id):
+        comment = Comment.query.filter_by(id=id,is_approved=True).first_or_404()
+
+        user = User.query.filter_by(email=comment.author_email).first()
+        comment.photo = user.avatar_url if user else ''
+
+        replies = CommentReply.query.filter_by(
+            comment_id=comment.id
+        ).order_by(CommentReply.created_at.desc()).all()
+
+        for reply in replies:
+            reply.user = User.query.filter_by(id=reply.user_id).first()
+
+        comment.replies = replies
+
+        comment.likes = Reaction.query.filter_by(
+            comment_id=comment.id,
+            reaction_type='like'
+        ).all()
+
+        comment.dislikes = Reaction.query.filter_by(
+            comment_id=comment.id,
+            reaction_type='dislike'
+        ).all()
+
+        return render_template('share_comment.html',comment=comment)
+
     @app.route('/articles/<slug>/comment', methods=['POST'])
     def add_comment(slug):
         article = Article.query.filter_by(slug=slug, status='published').first_or_404()
-        name = request.form.get('author_name', '').strip()
-        email = request.form.get('author_email', '').strip()
+        name = session.get('username')
+        email = session.get('user_email')
+        if not session.get('user_id') or not name or not email:
+            flash('Please login to comment', 'error')
+            return redirect(url_for('article_detail', slug=slug))
         content = request.form.get('content', '').strip()
+        
+        if(len(content) > 500):
+            flash('Invalid comment length', 'error')
+            return redirect(url_for('article_detail', slug=slug))
 
         if name and email and content:
             comment = Comment(
                 article_id=article.id,
+                user_id=session.get('user_id'),
                 author_name=name,
                 author_email=email,
                 content=content,
@@ -457,6 +714,114 @@ def create_app(config_class=Config):
 
         return redirect(url_for('article_detail', slug=slug))
 
+    @app.route('/comments/<int:id>/reply', methods=['POST'])
+    def reply(id):
+        next=request.args.get('next')
+        comment = Comment.query.filter_by(id=id).first_or_404()
+        name = session.get('username')
+        email = session.get('user_email')
+        
+        if not session.get('user_id') or not name or not email:
+            flash('Please login to comment', 'error')
+            return redirect(next)
+        
+        content = request.form.get('reply', '').strip()
+        
+        if(len(content) > 500):
+            flash(f'Invalid comment length: {len(content)}', 'error')
+            return redirect(next)
+
+        if name and email and content:
+            reply = CommentReply(
+                article_id=comment.article_id,
+                user_id=session.get('user_id'),
+                author_name=name,
+                author_email=email,
+                content=content,
+                is_approved=True,
+                comment_id=comment.id
+                
+            )
+            
+            try:
+                db.session.add(reply)
+                db.session.commit()
+                flash('Comment sent', 'success')
+                return redirect(next)
+                
+            except Exception as e:
+                return render_template('500.html', error=f"Database error: {str(e)}"), 500
+
+        flash('Missing data', 'error')
+        return redirect(next)
+
+
+    @app.route('/comments/<int:id>/<string:reaction>', methods=['POST'])
+    def react(id, reaction):
+        if not session.get('user_id'):
+            return jsonify({'error':'Please login to react'}), 401
+
+        if reaction not in ['like', 'dislike']:
+            return jsonify({'error':'Invalid reaction'}), 400
+
+        comment = Comment.query.filter_by(id=id).first_or_404()
+
+        exists = Reaction.query.filter_by(
+            user_id=session.get('user_id'),
+            comment_id=comment.id
+        ).first()
+
+        if exists:
+            if exists.reaction_type == reaction:
+                db.session.delete(exists)
+                db.session.commit()
+                liked = False
+                disliked = False
+                success = 'Removed'
+            else:
+                exists.reaction_type = reaction
+                exists.created_at = datetime.datetime.utcnow()
+                db.session.commit()
+                liked = reaction == 'like'
+                disliked = reaction == 'dislike'
+                success = f'{reaction}d'
+        else:
+            try:
+                reaction_dict = Reaction(
+                    article_id=comment.article_id,
+                    user_id=session.get('user_id'),
+                    reaction_type=reaction,
+                    comment_id=comment.id
+                )
+
+                db.session.add(reaction_dict)
+                db.session.commit()
+
+                liked = reaction == 'like'
+                disliked = reaction == 'dislike'
+                success = f'{reaction}d'
+
+            except Exception as e:
+                db.session.rollback()
+                return jsonify({'error':f'Database error: {str(e)}'}), 500
+
+        likes = Reaction.query.filter_by(
+            comment_id=comment.id,
+            reaction_type='like'
+        ).count()
+
+        dislikes = Reaction.query.filter_by(
+            comment_id=comment.id,
+            reaction_type='dislike'
+        ).count()
+
+        return jsonify({
+            'success':success,
+            'likes':likes,
+            'dislikes':dislikes,
+            'liked':liked,
+            'disliked':disliked
+        })  
     @app.route('/categories')
     def categories_list():
         categories = Category.query.all()

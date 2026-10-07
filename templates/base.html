@@ -49,7 +49,7 @@
     </script>
     <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
 
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css">
 
     <script type="application/ld+json">
     {
@@ -78,8 +78,14 @@
                 <a href="{{ url_for('categories_list') }}" class="text-gray-600 hover:text-spaceGreen-700 transition">Categories</a>
                 <a href="{{ url_for('about') }}" class="text-gray-600 hover:text-spaceGreen-700 transition">About</a>
                 <a href="{{ url_for('contact') }}" class="text-gray-600 hover:text-spaceGreen-700 transition">Contact</a>
-                {% if session.get('username') %}
+                {% if session.get('user_id') %}
+                {% if session.get('is_admin') %}
                 <a href="{{ url_for('admin.dashboard') }}" class="text-gray-600 hover:text-spaceGreen-700 transition">Dashboard</a>
+                {% else %}
+                <img src="{{ session.get('photo') }}" class="w-6 border border-2 h-6 rounded-full" title="{{ session.get('username') }}">
+                {% endif %}
+                {% else %}
+                <a href="/login">Login</a>
                 {% endif %}
 
             </nav>
