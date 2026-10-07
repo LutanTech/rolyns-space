@@ -8,6 +8,7 @@ import json
 import math
 import os
 import random
+import string
 import uuid
 
 from flask import current_app
@@ -28,12 +29,13 @@ from flask import current_app
 from flask_sqlalchemy import SQLAlchemy
 from google_auth_oauthlib.flow import Flow
 import markdown2
-import requests, string
+import requests
 from slugify import slugify
 from sqlalchemy import func, or_
 from werkzeug.security import check_password_hash, generate_password_hash
 from werkzeug.utils import secure_filename
-
+from flask import make_response, send_from_directory
+from pathlib import Path
 
 # ==========================================
 # 1. CONFIGURATION
@@ -413,8 +415,7 @@ def create_app(config_class=Config):
         )
         
         
-    from flask import make_response, send_from_directory
-    from pathlib import Path
+    
 
     @app.get("/service-worker.js")
     def service_worker():
@@ -755,6 +756,14 @@ def create_app(config_class=Config):
         flash('Missing data', 'error')
         return redirect(next)
 
+    @app.route('/privacy-policy')
+    def privacy():
+        return render_template('privacy.html')
+
+    @app.route('/terms-of-service')
+    def terms():
+        return render_template('terms.html')
+   
 
     @app.route('/comments/<int:id>/<string:reaction>', methods=['POST'])
     def react(id, reaction):
@@ -822,6 +831,7 @@ def create_app(config_class=Config):
             'liked':liked,
             'disliked':disliked
         })  
+   
     @app.route('/categories')
     def categories_list():
         categories = Category.query.all()

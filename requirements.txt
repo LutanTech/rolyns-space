@@ -1,9 +1,10 @@
 Flask
 Flask-SQLAlchemy
 Flask-Migrate
-Markdown
 Werkzeug
 gunicorn
 email-validator
 markdown2
 python-slugify
+google-auth-oauthlib
+requests
