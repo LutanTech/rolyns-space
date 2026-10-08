@@ -217,7 +217,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         <div class="space-y-4" id="comments">
             {% for comment in comments %}
-            <div class="p-4 bg-white border border-gray-100 rounded space-y-2">
+            <div class="p-4 bg-white border border-gray-100 rounded space-y-2" id="comment-{{ comment.id }}-{{ comment.user_id }}">
                 <div class="flex justify-start items-center text-xs gap-2 relative">
                     <img src="{{ comment.photo }}" class="w-9 h-9 rounded-full border border-2">
                     <div class="flex flex-col">
@@ -267,7 +267,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
         
                     <div class="comment-actions flex gap-4">
-                        <button onclick="document.getElementById('comment-reply-{{ comment.id }}-{{ comment.user_id }}').classList.toggle('block'); document.getElementById('comment-reply-{{ comment.id }}-{{ comment.user_id }}').classList.toggle('hidden'); document.getElementById('reply-input-{{ comment.id }}-{{ comment.user_id }}').placeholder = 'Replying to {{ comment.author_name }} :{{comment.content[:20]}}...';document.getElementById('reply-input-{{ comment.id }}-{{ comment.user_id }}').focus()" class="hover:text-blue-400 text-xs underline ">
+                        <button onclick="document.getElementById('comment-reply-{{ comment.id }}-{{ comment.user_id }}').classList.toggle('block'); document.getElementById('comment-reply-{{ comment.id }}-{{ comment.user_id }}').classList.toggle('hidden'); document.getElementById('reply-input-{{ comment.id }}-{{ comment.user_id }}').placeholder = 'Replying to {{ comment.author_name }}...';document.getElementById('reply-input-{{ comment.id }}-{{ comment.user_id }}').focus()" class="hover:text-blue-400 text-xs underline ">
                             <i class="fas fa-reply"></i> Replies ({{ comment.replies | length or 0 }})
                         </button>
         

@@ -5,7 +5,7 @@
 
 {% block content %}
 <div class="space-y-8">
-    <div class="flex items-center justify-between border-b border-gray-100 pb-6">
+    <div class="flex items-center justify-between border-b border-gray-100 pb-6 flex-col">
         <div class="flex gap-4 items-center">
             <div><img src="{{ session.get('photo') or 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQz3XbgqPWjpcGeuSXJJq-pOo7acTbDktc7FYvWsLVSUeu3FVFMOxUdOvcj&s=10'}}" class="w-9 h-9 rounded-full"></div>
             <div>
@@ -22,6 +22,9 @@
             </a>
             <a href="{{ url_for('admin.messages') }}" class="px-4 py-2 border border-gray-200 text-gray-600 text-xs font-bold rounded hover:bg-gray-50 transition">
                 Messages ({{ total_messages }})
+            </a>
+            <a href="{{ url_for('admin.reports') }}" class="px-4 py-2 border border-gray-200 text-gray-600 text-xs font-bold rounded hover:bg-gray-50 transition">
+                Reports ({{ total_reports }})
             </a>
         </div>
     </div>
@@ -42,6 +45,10 @@
         <div class="p-6 bg-white border border-gray-100 rounded space-y-1">
             <span class="text-xs text-gray-500 font-medium">Messages</span>
             <div class="text-2xl font-bold text-gray-900">{{ total_messages }}</div>
+        </div>
+        <div class="p-6 bg-white border border-gray-100 rounded space-y-1">
+            <span class="text-xs text-gray-500 font-medium">Reports</span>
+            <div class="text-2xl font-bold text-gray-900">{{ total_reports }}</div>
         </div>
 
     </div>

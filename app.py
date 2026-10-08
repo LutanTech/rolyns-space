@@ -11,6 +11,7 @@ import random
 import string
 import uuid
 
+from blinker.base import F
 from flask import current_app
 from flask import (
     Flask,
@@ -158,6 +159,7 @@ class Comment(db.Model):
     author_email = db.Column(db.String(120), nullable=False)
     content = db.Column(db.Text, nullable=False)
     is_approved = db.Column(db.Boolean, default=True)
+    is_reported = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
     
 
@@ -173,7 +175,22 @@ class CommentReply(db.Model):
     is_approved = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
     
-    
+class CommentReport(db.Model):
+    __tablename__ = 'reports'
+    id = db.Column(db.Integer, primary_key=True)
+    article_id = db.Column(db.Integer, db.ForeignKey('articles.id'), nullable=False)
+    comment_id = db.Column(db.Integer, db.ForeignKey('comments.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    reporter_name = db.Column(db.String(100), nullable=True)
+    reporter_email = db.Column(db.String(120), nullable=True)
+    content = db.Column(db.Text, nullable=False)
+    is_resolved = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
+    comment = db.relationship("Comment", backref="reports")
+    article = db.relationship("Article")
+    user = db.relationship("User")
+        
+
 
 class Reaction(db.Model):
     __tablename__ = 'reactions'
@@ -211,7 +228,7 @@ def login_required(f):
     def decorated_function(*args, **kwargs):
         if 'user_id' not in session:
             flash('Please log in to access the dashboard.', 'error')
-            return redirect(url_for('google.login'))
+            return redirect(url_for('login'))
         return f(*args, **kwargs)
     return decorated_function
 
@@ -246,7 +263,24 @@ def upload_image():
         return jsonify({'success':True,'url':f"/static/uploads/{filename}"})
     except Exception as e:
         return jsonify({'error':str(e)}),500
-    
+
+@admin_bp.route('/reports')
+@admin_required
+def reports():
+    reports = CommentReport.query.order_by(CommentReport.created_at.desc()).all()
+    return render_template('admin/reports.html', reports=reports)
+
+
+@admin_bp.route('/reports/<int:report_id>/resolve', methods=['POST'])
+@admin_required
+def resolve_report(report_id):
+    report = CommentReport.query.get_or_404(report_id)
+    report.is_resolved = True
+    comment = Comment.query.get_or_404(report.comment_id)
+    comment.is_reported = False
+    db.session.commit()
+    flash('Report marked as resolved.', 'success')
+    return redirect(url_for('admin.reports'))
 
 @admin_bp.errorhandler(404)
 def page_not_found(e):
@@ -277,6 +311,7 @@ def dashboard():
     total_comments = Comment.query.count()
     total_subscribers = Subscriber.query.count()
     total_messages = Message.query.count()
+    total_reports = CommentReport.query.count()
     articles = Article.query.order_by(Article.created_at.desc()).all()
     comments = Comment.query.order_by(Comment.created_at.desc()).limit(10).all()
     categories = Category.query.all()
@@ -285,6 +320,7 @@ def dashboard():
                            total_comments=total_comments,
                            total_subscribers=total_subscribers,
                            total_messages=total_messages,
+                           total_reports=total_reports,
                            articles=articles,
                            comments=comments,
                            categories=categories)
@@ -437,6 +473,7 @@ def create_app(config_class=Config):
         if comment.user_id != session.get('user_id'):
             flash('Unauthorized deletion. Logging suspicious activity.', 'error')
             return redirect(next_url)
+        
 
         Reaction.query.filter_by(comment_id=comment.id).delete()
 
@@ -531,8 +568,11 @@ def create_app(config_class=Config):
         session['username']=user.username
         session['photo']=user.avatar_url
         session['user_email']=user.email
-        session['is_admin']=user.is_admin
         session['token']=token
+        
+        if user.is_admin:
+            session['is_admin']=user.is_admin
+
 
         next_url=session.pop("google_next",None)
 
@@ -558,9 +598,12 @@ def create_app(config_class=Config):
                 session['username']=user.username
                 session['photo']=user.avatar_url
                 session['user_email']=user.email
-                session['is_admin']=user.is_admin
+                if user.is_admin:
+                   session['is_admin']=user.is_admin
                 
                 flash('Logged in successfully.','success')
+                if user.is_admin:
+                    return redirect(url_for('admin.dashboard'))
                 return redirect(url_for('index'))
 
             flash('Invalid username or password.','error')
@@ -634,7 +677,7 @@ def create_app(config_class=Config):
             Article.status == 'published'
         ).order_by(Article.published_at.asc()).first()
         
-        comments = article.comments.filter_by(is_approved=True).order_by(Comment.created_at.desc()).all()
+        comments = article.comments.filter_by(is_approved=True, is_reported=False).order_by(Comment.created_at.desc()).all()
         
         for comment in comments:
             user = User.query.filter_by(email=comment.author_email).first()
@@ -764,6 +807,46 @@ def create_app(config_class=Config):
     def terms():
         return render_template('terms.html')
    
+    @app.route("/comments/<int:comment_id>/report", methods=["GET", "POST"])
+    def report_comment(comment_id):
+        comment = Comment.query.get_or_404(comment_id)
+        next_url = request.args.get("next") or request.form.get("next") or url_for("index")
+
+        if request.method == "POST":
+            reporter_name = request.form.get("reporter_name", "").strip()
+            reporter_email = request.form.get("reporter_email", "").strip()
+            content = request.form.get("content", "").strip()
+
+            if not reporter_email or not content or not reporter_name:
+                flash("Please complete all fields.", "error")
+                return render_template(
+                    "report_comment.html",
+                    comment=comment,
+                    next_url=next_url
+                )
+
+            report = CommentReport(
+                article_id=comment.article_id,
+                comment_id=comment.id,
+                user_id=None,
+                reporter_name=reporter_name or 'no_name',
+                reporter_email=reporter_email or 'no_email',
+                content=content
+            )
+
+            comment.is_reported = True
+
+            db.session.add(report)
+            db.session.commit()
+
+            flash("Comment reported successfully.", "success")
+            return redirect(next_url)
+
+        return render_template(
+            "report_comment.html",
+            comment=comment,
+            next_url=next_url
+        )
 
     @app.route('/comments/<int:id>/<string:reaction>', methods=['POST'])
     def react(id, reaction):
