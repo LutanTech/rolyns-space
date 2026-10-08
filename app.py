@@ -469,6 +469,10 @@ def create_app(config_class=Config):
         next_url = request.args.get('next') or request.referrer or '/'
 
         comment = Comment.query.get_or_404(id)
+        
+        if comment.is_reported:
+            flash('Unauthorized deletion. Comment is under review.', 'error')
+            return redirect(next_url)
 
         if comment.user_id != session.get('user_id'):
             flash('Unauthorized deletion. Logging suspicious activity.', 'error')
@@ -489,6 +493,10 @@ def create_app(config_class=Config):
     @app.route("/google/login")
     def google_login():
         next_url=request.args.get("next")
+        
+        if session.get('user_id'):
+            flash('Already logged in.', 'success')
+            return redirect(next_url)
 
         if next_url:
             session["google_next"]=next_url
