@@ -42,7 +42,7 @@
             {% endif %}
             <div class="p-6 flex-grow flex flex-col">
                 <div class="flex items-center space-x-2 text-xs text-[#7cffcb] font-semibold mb-2">
-                    <a href="{{ url_for('articles_list', category=article.category.slug) }}" class="hover:underline">{{ article.category.name }}</a>
+                    <a href="{{ url_for('articles_category', category_slug=article.category.slug) }}" class="hover:underline">{{ article.category.name }}</a>
                     <span>&bull;</span>
                     <span class="text-gray-500">{{ article.reading_time }} min read</span>
                 </div>

@@ -12,7 +12,7 @@
 
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {% for category in categories %}
-        <a href="{{ url_for('articles_list', category=category.slug) }}" class="p-6 border border-gray-100 rounded-lg hover:border-[#7cffcb] transition group space-y-2 block bg-white">
+        <a href="{{ url_for('articles_category', category_slug=category.slug) }}" class="p-6 border border-gray-100 rounded-lg hover:border-[#7cffcb] transition group space-y-2 block bg-white">
             <h2 class="text-lg font-bold text-gray-900 group-hover:text-[#7cffcb] transition flex justify-between items-center">
                 <span>{{ category.name }}</span>
                 <span class="text-xs font-normal text-gray-400">({{ category.articles.count() }})</span>

@@ -34,20 +34,124 @@
 			<span class="text-blue-500 cursor-pointer hover:outline p-1 hover:rounded hover:outline-blue-600" onclick="shareLink()">
 				<i class="fas fa-share-alt"></i> Share Link
 			</span>
-			
-			<script>
-function shareLink() {
-	const url = document.querySelector('.url')
-		.innerText.trim()
-	if (navigator.share) navigator.share({
-		title: document.title,
-		url
-	})
-	else navigator.clipboard.writeText(url)
-		.then(() => alert('Link copied to clipboard'))
-}
 
-			</script>
+            <script>
+			function shareLink(){
+                const url = document.querySelector('.url')?.innerText.trim() || window.location.href;
+                const title = document.title;
+                const isWindows = /Windows/i.test(navigator.userAgent);
+            
+                const shareOverlay = () => {
+                    const encodedUrl = encodeURIComponent(url);
+                    const encodedTitle = encodeURIComponent(title);
+            
+                    const overlay = document.createElement('div');
+                    overlay.className = 'fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-md transition-all duration-300 animate-fadeIn';
+                    
+                    overlay.innerHTML = `
+                        <div class="w-full max-w-sm bg-white/95 backdrop-blur-xl border border-white/20 rounded-3xl shadow-2xl shadow-slate-900/10 p-6 relative transform transition-all duration-300 scale-100">
+                            <button type="button" class="close-modal absolute top-5 right-5 w-8 h-8 rounded-full bg-slate-100 text-slate-400 hover:text-slate-700 hover:bg-slate-200 flex items-center justify-center transition-all duration-200">
+                                <i class="fas fa-times text-sm"></i>
+                            </button>
+            
+                            <div class="text-center mb-6 pt-1">
+                                <div class="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto mb-3 shadow-sm">
+                                    <i class="fas fa-share-nodes text-lg"></i>
+                                </div>
+                                <h3 class="text-lg font-semibold text-slate-900 tracking-tight">Share this page</h3>
+                                <p class="text-xs text-slate-500 mt-0.5">Spread the word with your network</p>
+                            </div>
+            
+                            <div class="grid grid-cols-2 gap-2.5 mb-4">
+                                <a href="https://wa.me/?text=${encodedTitle}%20${encodedUrl}" target="_blank" rel="noopener noreferrer" class="group flex items-center gap-3 p-3 rounded-2xl bg-emerald-50 hover:bg-emerald-500 text-emerald-700 hover:text-white border border-emerald-100/60 hover:border-transparent transition-all duration-200">
+                                    <div class="w-8 h-8 rounded-xl bg-emerald-500 group-hover:bg-white/20 text-white flex items-center justify-center transition-colors">
+                                        <i class="fab fa-whatsapp text-sm"></i>
+                                    </div>
+                                    <span class="text-xs font-medium">WhatsApp</span>
+                                </a>
+            
+                                <a href="https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}" target="_blank" rel="noopener noreferrer" class="group flex items-center gap-3 p-3 rounded-2xl bg-blue-50 hover:bg-blue-600 text-blue-700 hover:text-white border border-blue-100/60 hover:border-transparent transition-all duration-200">
+                                    <div class="w-8 h-8 rounded-xl bg-blue-600 group-hover:bg-white/20 text-white flex items-center justify-center transition-colors">
+                                        <i class="fab fa-facebook-f text-sm"></i>
+                                    </div>
+                                    <span class="text-xs font-medium">Facebook</span>
+                                </a>
+            
+                                <a href="https://twitter.com/intent/tweet?text=${encodedTitle}&url=${encodedUrl}" target="_blank" rel="noopener noreferrer" class="group flex items-center gap-3 p-3 rounded-2xl bg-slate-100 hover:bg-slate-900 text-slate-800 hover:text-white border border-slate-200/60 hover:border-transparent transition-all duration-200">
+                                    <div class="w-8 h-8 rounded-xl bg-slate-900 group-hover:bg-white/20 text-white flex items-center justify-center transition-colors">
+                                        <i class="fab fa-x-twitter text-sm"></i>
+                                    </div>
+                                    <span class="text-xs font-medium">X (Twitter)</span>
+                                </a>
+            
+                                <a href="https://t.me/share/url?url=${encodedUrl}&text=${encodedTitle}" target="_blank" rel="noopener noreferrer" class="group flex items-center gap-3 p-3 rounded-2xl bg-sky-50 hover:bg-sky-500 text-sky-700 hover:text-white border border-sky-100/60 hover:border-transparent transition-all duration-200">
+                                    <div class="w-8 h-8 rounded-xl bg-sky-500 group-hover:bg-white/20 text-white flex items-center justify-center transition-colors">
+                                        <i class="fab fa-telegram-plane text-sm"></i>
+                                    </div>
+                                    <span class="text-xs font-medium">Telegram</span>
+                                </a>
+            
+                                <a href="mailto:?subject=${encodedTitle}&body=${encodedUrl}" class="col-span-2 group flex items-center justify-center gap-2.5 p-3 rounded-2xl bg-slate-50 hover:bg-slate-700 text-slate-700 hover:text-white border border-slate-200/60 hover:border-transparent transition-all duration-200">
+                                    <div class="w-8 h-8 rounded-xl bg-slate-700 group-hover:bg-white/20 text-white flex items-center justify-center transition-colors">
+                                        <i class="fas fa-envelope text-xs"></i>
+                                    </div>
+                                    <span class="text-xs font-medium">Share via Email</span>
+                                </a>
+                            </div>
+            
+                            <div class="flex items-center gap-2 p-1.5 pl-3 rounded-2xl bg-slate-50 border border-slate-200/60">
+                                <input type="text" readonly value="${url}" class="w-full bg-transparent text-xs text-slate-600 outline-none truncate select-all">
+                                <button type="button" class="copy-btn shrink-0 px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium transition-all shadow-sm active:scale-95 flex items-center gap-1.5">
+                                    <i class="fas fa-copy text-[10px]"></i> Copy
+                                </button>
+                            </div>
+                        </div>
+                    `;
+            
+                    const closeModal = () => {
+                        overlay.style.opacity = '0';
+                        setTimeout(() => overlay.remove(), 200);
+                    };
+            
+                    overlay.querySelector('.close-modal').addEventListener('click', closeModal);
+                    overlay.addEventListener('click', e => {
+                        if (e.target === overlay) closeModal();
+                    });
+            
+                    const copyBtn = overlay.querySelector('.copy-btn');
+                    copyBtn.addEventListener('click', () => {
+                        navigator.clipboard.writeText(url).then(() => {
+                            copyBtn.innerHTML = '<i class="fas fa-check text-[10px]"></i> Copied';
+                            copyBtn.classList.remove('bg-indigo-600', 'hover:bg-indigo-700');
+                            copyBtn.classList.add('bg-emerald-600');
+                            setTimeout(() => {
+                                copyBtn.innerHTML = '<i class="fas fa-copy text-[10px]"></i> Copy';
+                                copyBtn.classList.remove('bg-emerald-600');
+                                copyBtn.classList.add('bg-indigo-600', 'hover:bg-indigo-700');
+                            }, 2000);
+                        });
+                    });
+            
+                    document.body.appendChild(overlay);
+                };
+            
+                if (isWindows) {
+                    shareOverlay();
+                    return;
+                }
+            
+                if (navigator.share) {
+                    navigator.share({
+                        title: document.title,
+                        url: url
+                    }).catch(() => {
+                        shareOverlay();
+                    });
+                } else {
+                    shareOverlay();
+                }
+            }
+            </script>
 			
 		</div>
 		<style>

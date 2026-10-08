@@ -7,7 +7,10 @@ import io
 import json
 import math
 import os
+from pathlib import Path
 import random
+import re
+import secrets
 import string
 import uuid
 
@@ -27,6 +30,7 @@ from flask import (
 )
 from flask import Blueprint
 from flask import current_app
+from flask import make_response, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 from google_auth_oauthlib.flow import Flow
 import markdown2
@@ -35,8 +39,6 @@ from slugify import slugify
 from sqlalchemy import func, or_
 from werkzeug.security import check_password_hash, generate_password_hash
 from werkzeug.utils import secure_filename
-from flask import make_response, send_from_directory
-from pathlib import Path
 
 # ==========================================
 # 1. CONFIGURATION
@@ -298,7 +300,7 @@ def messages():
     return render_template('admin/messages.html', messages=messages)
 
 @admin_bp.route('/logout')
-def logout():
+def admin_logout():
     session.clear()
     flash('Logged out successfully.', 'success')
     return redirect(url_for('index'))
@@ -345,7 +347,11 @@ def article_create():
             slug = f"{base_slug}-{counter}"
             counter += 1
 
-        content_html = markdown2.markdown(content_markdown, extras=['fenced-code-blocks', 'tables'])
+        content_html=re.sub(
+                r'<a\s+href=',
+                '<a target="_blank" rel="noopener noreferrer" href=',
+                markdown2.markdown(content_markdown,extras=['fenced-code-blocks','tables'])
+            )
         
         # Featured image upload handling
         featured_image = None
@@ -357,9 +363,9 @@ def article_create():
             featured_image = f"/static/uploads/{filename}"
 
         article = Article(
-            title=title,
+            title=markdown2.markdown(title, extras=['fenced-code-blocks', 'tables']),
             slug=slug,
-            summary=summary,
+            summary=markdown2.markdown(summary, extras=['fenced-code-blocks', 'tables']),
             content_markdown=content_markdown,
             content_html=content_html,
             category_id=category_id,
@@ -450,7 +456,27 @@ def create_app(config_class=Config):
             global_categories=categories
         )
         
+    @app.after_request
+    def security_headers(response):
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["Content-Security-Policy"] = "frame-ancestors 'none'"
+        return response
         
+        
+    @app.after_request
+    def inject_csrf(response):
+        if response.content_type.startswith("text/html"):
+            token=session.setdefault("csrf_token",secrets.token_urlsafe(32))
+            html=response.get_data(as_text=True)
+            html=re.sub(r"(<form\b[^>]*>)",rf'\1<input type="hidden" name="csrf_token" value="{token}">',html,flags=re.I)
+            response.set_data(html)
+        return response
+    
+    @app.before_request
+    def csrf_protect():
+        if request.method=="POST":
+            if not hmac.compare_digest(request.form.get("csrf_token",""),session.get("csrf_token","")):
+                abort(403)
     
 
     @app.get("/service-worker.js")
@@ -463,7 +489,7 @@ def create_app(config_class=Config):
         response.headers["Cache-Control"] = "no-cache"
         return response
 
-    @app.route('/comments/<int:id>/delete', methods=['GET'])
+    @app.route('/comments/<int:id>/delete', methods=['POST'])
     @login_required
     def comment_delete(id):
         next_url = request.args.get('next') or request.referrer or '/'
@@ -488,6 +514,13 @@ def create_app(config_class=Config):
 
         flash('Comment deleted.', 'success')
         return redirect(next_url)
+
+
+    @app.route('/logout')
+    def logout():
+        session.clear()
+        flash('Logged out successfully.', 'success')
+        return redirect(url_for('index'))
 
     
     @app.route("/google/login")
@@ -644,6 +677,31 @@ def create_app(config_class=Config):
     def articles_list():
         page = request.args.get('page', 1, type=int)
         category_slug = request.args.get('category', type=str)
+        tag_slug = request.args.get('tag', type=str)
+        
+        query = Article.query.filter_by(status='published')
+        
+        selected_category = None
+        if category_slug:
+            selected_category = Category.query.filter_by(slug=category_slug).first_or_404()
+            query = query.filter_by(category_id=selected_category.id)
+            
+        selected_tag = None
+        if tag_slug:
+            selected_tag = Tag.query.filter_by(slug=tag_slug).first_or_404()
+            query = query.filter(Article.tags.contains(selected_tag))
+            
+        pagination = query.order_by(Article.published_at.desc()).paginate(page=page, per_page=9)
+        
+        return render_template('articles.html',
+                               articles=pagination.items,
+                               pagination=pagination,
+                               selected_category=selected_category,
+                               selected_tag=selected_tag)
+        
+    @app.route('/articles/category/<string:category_slug>')
+    def articles_category(category_slug):
+        page = request.args.get('page', 1, type=int)
         tag_slug = request.args.get('tag', type=str)
         
         query = Article.query.filter_by(status='published')
