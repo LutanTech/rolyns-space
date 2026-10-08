@@ -553,7 +553,7 @@ def create_app(config_class=Config):
             password=request.form.get('password')
             user=User.query.filter_by(username=username).first()
 
-            if user and user.check_password(password) and user.is_admin:
+            if user and user.check_password(password):
                 session['user_id']=user.id
                 session['username']=user.username
                 session['photo']=user.avatar_url
@@ -561,7 +561,7 @@ def create_app(config_class=Config):
                 session['is_admin']=user.is_admin
                 
                 flash('Logged in successfully.','success')
-                return redirect(url_for('admin.dashboard'))
+                return redirect(url_for('index'))
 
             flash('Invalid username or password.','error')
 
