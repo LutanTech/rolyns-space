@@ -582,6 +582,10 @@ def create_app(config_class=Config):
         flash("Logged in Successfully","success")
 
         return redirect(next_url)
+    
+    @app.route("/license")
+    def license():
+        return render_template("license.html")
 
     @app.route('/login',methods=['GET','POST'])
     def login():
