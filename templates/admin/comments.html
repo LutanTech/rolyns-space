@@ -1,0 +1,166 @@
+<!-- templates/admin/comments.html -->
+{% extends "base.html" %}
+
+{% block title %}Comments — {{ site_name }}{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="flex items-center justify-between border-b border-gray-100 pb-4">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">Comments</h1>
+            <p class="text-xs text-gray-500">Click any comment row to view its card overlay and details.</p>
+        </div>
+        <a href="{{ url_for('admin.dashboard') }}" class="px-4 py-2 border border-gray-200 text-gray-600 text-xs font-bold rounded hover:bg-gray-50 transition">
+            &larr; Back to Dashboard
+        </a>
+    </div>
+
+    <div class="overflow-x-auto border border-gray-100 rounded">
+        <table class="w-full text-left text-xs text-gray-600">
+            <thead class="bg-gray-50 border-b border-gray-100 font-bold uppercase text-gray-700">
+                <tr>
+                    <th class="p-3">Author</th>
+                    <th class="p-3">Comment Preview</th>
+                    <th class="p-3">Article</th>
+                    <th class="p-3">Status</th>
+                    <th class="p-3">Date</th>
+                    <th class="p-3 text-right">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100 bg-white">
+                {% for comment in comments %}
+                <tr class="hover:bg-gray-50 cursor-pointer transition comment-row"
+                    data-id="{{ comment.id }}"
+                    data-author-name="{{ comment.author_name }}"
+                    data-author-email="{{ comment.author_email }}"
+                    data-content="{{ comment.content }}"
+                    data-article-title="{{ comment.article.title if comment.article else 'Deleted Article' }}"
+                    data-is-flagged="{{ 'True' if comment.is_flagged else 'False' }}"
+                    data-created-at="{{ comment.created_at.strftime('%Y-%m-%d %H:%M') }}"
+                    data-delete-url="{{ url_for('admin.admin_comment_delete', id=comment.id) }}">
+                    <td class="p-3">
+                        <div class="font-bold text-gray-900">{{ comment.author_name }}</div>
+                        <div class="text-[10px] text-gray-400">{{ comment.author_email }}</div>
+                    </td>
+                    <td class="p-3 max-w-xs truncate text-gray-700">
+                        {{ comment.content }}
+                    </td>
+                    <td class="p-3 font-semibold text-gray-900">
+                        {{ (comment.article.title|truncate(30)) if comment.article else 'Deleted Article' }}
+                    </td>
+                    <td class="p-3">
+                        {% if comment.is_flagged %}
+                        <span class="px-2 py-0.5 bg-red-50 text-red-700 rounded text-[10px] font-bold uppercase">Flagged</span>
+                        {% else %}
+                        <span class="px-2 py-0.5 bg-green-50 text-green-700 rounded text-[10px] font-bold uppercase">Clean</span>
+                        {% endif %}
+                    </td>
+                    <td class="p-3 text-gray-500 whitespace-nowrap">
+                        {{ comment.created_at.strftime('%Y-%m-%d %H:%M') }}
+                    </td>
+                    <td class="p-3 text-right whitespace-nowrap" onclick="event.stopPropagation();">
+                        <form action="{{ url_for('admin.admin_comment_delete', id=comment.id) }}" method="POST" class="inline" onsubmit="return confirm('Delete this comment permanently?');">
+                            <button type="submit" class="text-red-600 font-bold hover:underline">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="6" class="p-4 text-center text-gray-400">No comments found.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Comment Card Overlay / Modal -->
+    <div id="commentModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 hidden">
+        <div class="bg-white rounded-lg shadow-xl border border-gray-100 max-w-lg w-full p-6 space-y-4 relative" id="modalContentBox">
+            <button type="button" id="closeModalBtn" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-lg font-bold">&times;</button>
+
+            <div class="border-b border-gray-100 pb-3 flex justify-between items-start">
+                <div>
+                    <span class="text-[10px] font-bold uppercase tracking-wider text-gray-400">Comment Details</span>
+                    <h3 id="modalAuthorName" class="text-base font-bold text-gray-900"></h3>
+                    <p id="modalAuthorEmail" class="text-xs text-gray-500"></p>
+                </div>
+                <div id="modalFlagBadge"></div>
+            </div>
+
+            <div class="space-y-2">
+                <div class="text-[11px] font-semibold text-gray-400 uppercase">Article</div>
+                <div id="modalArticleTitle" class="text-xs font-bold text-gray-800"></div>
+            </div>
+
+            <div class="space-y-2">
+                <div class="text-[11px] font-semibold text-gray-400 uppercase">Comment</div>
+                <div id="modalCommentText" class="p-3 bg-gray-50 rounded border border-gray-100 text-xs text-gray-800 whitespace-pre-wrap leading-relaxed max-h-48 overflow-y-auto"></div>
+            </div>
+
+            <div class="flex items-center justify-between border-t border-gray-100 pt-4">
+                <span id="modalCreatedAt" class="text-[10px] text-gray-400"></span>
+                <div class="flex space-x-2">
+                    <button type="button" id="closeModalFooterBtn" class="px-3 py-1.5 border border-gray-200 text-gray-600 text-xs font-bold rounded hover:bg-gray-50 transition">Close</button>
+                    <form id="modalDeleteForm" method="POST" onsubmit="return confirm('Delete this comment permanently?');">
+                        <button type="submit" class="px-3 py-1.5 bg-red-600 text-white text-xs font-bold rounded hover:bg-red-700 transition">Delete Comment</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const modal = document.getElementById('commentModal');
+    const closeModalBtn = document.getElementById('closeModalBtn');
+    const closeModalFooterBtn = document.getElementById('closeModalFooterBtn');
+    
+    const authorNameEl = document.getElementById('modalAuthorName');
+    const authorEmailEl = document.getElementById('modalAuthorEmail');
+    const articleTitleEl = document.getElementById('modalArticleTitle');
+    const commentTextEl = document.getElementById('modalCommentText');
+    const modalFlagBadge = document.getElementById('modalFlagBadge');
+    const createdAtEl = document.getElementById('modalCreatedAt');
+    const deleteFormEl = document.getElementById('modalDeleteForm');
+
+    document.querySelectorAll('.comment-row').forEach(row => {
+        row.addEventListener('click', function() {
+            authorNameEl.textContent = this.dataset.authorName;
+            authorEmailEl.textContent = this.dataset.authorEmail;
+            articleTitleEl.textContent = this.dataset.articleTitle;
+            commentTextEl.textContent = this.dataset.content;
+            createdAtEl.textContent = this.dataset.createdAt;
+            deleteFormEl.action = this.dataset.deleteUrl;
+
+            if (this.dataset.isFlagged === 'True') {
+                modalFlagBadge.innerHTML = '<span class="px-2 py-0.5 bg-red-50 text-red-700 rounded text-[10px] font-bold uppercase">Flagged</span>';
+            } else {
+                modalFlagBadge.innerHTML = '<span class="px-2 py-0.5 bg-green-50 text-green-700 rounded text-[10px] font-bold uppercase">Clean</span>';
+            }
+
+            modal.classList.remove('hidden');
+        });
+    });
+
+    function closeModal() {
+        modal.classList.add('hidden');
+    }
+
+    closeModalBtn.addEventListener('click', closeModal);
+    closeModalFooterBtn.addEventListener('click', closeModal);
+
+    modal.addEventListener('click', function(e) {
+        if (e.target === modal) {
+            closeModal();
+        }
+    });
+
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            closeModal();
+        }
+    });
+});
+</script>
+{% endblock %}

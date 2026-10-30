@@ -52,7 +52,11 @@ class Config:
     DOMAIN = 'jerry.tunujournal.com'
     SITE_NAME = 'Jerry Rolyns Space'
     
-    
+
+OFFENSIVE_WORDS = ['spam', 'abuse', 'offensive', 'insult', 'hate', 'hateful', 'racist', 'racism', 'sexist', 'discrimination', 'harassment', 'threat', 'threatening', 'violence', 'violent', 'bullying', 'bully', 'stupid', 'idiot', 'fool', 'moron', 'dumb', 'useless', 'worthless', 'bastard', 'asshole', 'bitch', 'damn', 'hell', 'fuck', 'fucking', 'shit', 'bullshit', 'motherfucker', 'dick', 'pussy', 'cunt', 'whore', 'slut', 'retard', 'nigger', 'nigga', 'kill', 'murder', 'rape', 'rapist', 'suicide', 'terrorist', 'terrorism', 'scam', 'fraud', 'phishing', 'malware', 'violate', 'violator', 'obscene', 'vulgar', 'profanity', 'porn', 'pornography']
+
+def check_is_flagged(content):
+    return bool(content and isinstance(content, str) and any(word in content.lower() for word in OFFENSIVE_WORDS))
 
 os.environ["OAUTHLIB_INSECURE_TRANSPORT"]="1"
 
@@ -326,6 +330,48 @@ def dashboard():
                            articles=articles,
                            comments=comments,
                            categories=categories)
+
+@admin_bp.route('/subscribers')
+@login_required
+@admin_required
+def subscribers():
+    subscribers = Subscriber.query.order_by(Subscriber.created_at.desc()).all()
+    return render_template('admin/subscribers.html', subscribers=subscribers)
+
+@admin_bp.route('/subscribers/<int:id>/delete', methods=['POST'])
+@login_required
+@admin_required
+def subscriber_delete(id):
+    sub = Subscriber.query.get_or_404(id)
+    db.session.delete(sub)
+    db.session.commit()
+    flash('Subscriber removed.', 'success')
+    return redirect(url_for('admin.subscribers'))
+
+@admin_bp.route('/comments')
+@login_required
+@admin_required
+def comments():
+    comments = Comment.query.order_by(Comment.created_at.desc()).all()
+    for comment in comments:
+        comment.is_flagged = check_is_flagged(comment.content)
+    return render_template('admin/comments.html', comments=comments)
+
+@admin_bp.route('/comments/<int:id>/delete', methods=['POST'])
+@login_required
+@admin_required
+def admin_comment_delete(id):
+    comment = Comment.query.get_or_404(id)
+    
+    # Cleanup related records before comment deletion
+    Reaction.query.filter_by(comment_id=comment.id).delete()
+    CommentReply.query.filter_by(comment_id=comment.id).delete()
+    CommentReport.query.filter_by(comment_id=comment.id).delete()
+
+    db.session.delete(comment)
+    db.session.commit()
+    flash('Comment deleted.', 'success')
+    return redirect(url_for('admin.comments'))
 
 @admin_bp.route('/articles/new', methods=['GET', 'POST'])
 @login_required

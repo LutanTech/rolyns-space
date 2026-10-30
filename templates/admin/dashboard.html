@@ -34,14 +34,15 @@
             <span class="text-xs text-gray-500 font-medium">Total Articles</span>
             <div class="text-2xl font-bold text-gray-900">{{ total_articles }}</div>
         </div>
-        <div class="p-6 bg-white border border-gray-100 rounded space-y-1">
+        <a href="{{ url_for('admin.comments') }}" class="p-6 bg-white border border-gray-100 rounded space-y-1 block hover:border-gray-200 transition">
             <span class="text-xs text-gray-500 font-medium">Comments</span>
             <div class="text-2xl font-bold text-gray-900">{{ total_comments }}</div>
-        </div>
-        <div class="p-6 bg-white border border-gray-100 rounded space-y-1">
+        </a>
+        
+        <a href="{{ url_for('admin.subscribers') }}" class="p-6 bg-white border border-gray-100 rounded space-y-1 block hover:border-gray-200 transition">
             <span class="text-xs text-gray-500 font-medium">Subscribers</span>
             <div class="text-2xl font-bold text-gray-900">{{ total_subscribers }}</div>
-        </div>
+        </a>
         <div class="p-6 bg-white border border-gray-100 rounded space-y-1">
             <span class="text-xs text-gray-500 font-medium">Messages</span>
             <div class="text-2xl font-bold text-gray-900">{{ total_messages }}</div>

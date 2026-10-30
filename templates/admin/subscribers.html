@@ -1,0 +1,49 @@
+<!-- templates/admin/subscribers.html -->
+{% extends "base.html" %}
+
+{% block title %}Subscribers — {{ site_name }}{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="flex items-center justify-between border-b border-gray-100 pb-4">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">Subscribers</h1>
+            <p class="text-xs text-gray-500">Manage blog newsletter subscribers (Total: {{ subscribers|length }}).</p>
+        </div>
+        <a href="{{ url_for('admin.dashboard') }}" class="px-4 py-2 border border-gray-200 text-gray-600 text-xs font-bold rounded hover:bg-gray-50 transition">
+            &larr; Back to Dashboard
+        </a>
+    </div>
+
+    <div class="overflow-x-auto border border-gray-100 rounded">
+        <table class="w-full text-left text-xs text-gray-600">
+            <thead class="bg-gray-50 border-b border-gray-100 font-bold uppercase text-gray-700">
+                <tr>
+                    <th class="p-3">ID</th>
+                    <th class="p-3">Email Address</th>
+                    <th class="p-3">Subscribed At</th>
+                    <th class="p-3 text-right">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100 bg-white">
+                {% for sub in subscribers %}
+                <tr>
+                    <td class="p-3 font-semibold text-gray-900">#{{ sub.id }}</td>
+                    <td class="p-3 font-medium text-gray-900">{{ sub.email }}</td>
+                    <td class="p-3">{{ sub.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                    <td class="p-3 text-right">
+                        <form action="{{ url_for('admin.subscriber_delete', id=sub.id) }}" method="POST" class="inline" onsubmit="return confirm('Remove subscriber {{ sub.email }}?');">
+                            <button type="submit" class="text-red-600 font-bold hover:underline">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="4" class="p-4 text-center text-gray-400">No subscribers found.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
