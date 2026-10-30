@@ -114,6 +114,17 @@ class User(db.Model):
 
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
+    
+    
+class RequestLog(db.Model):
+    __tablename__ = 'request_logs'
+    id = db.Column(db.Integer, primary_key=True)
+    method = db.Column(db.String(10), nullable=False)
+    path = db.Column(db.String(500), nullable=False)
+    status_code = db.Column(db.Integer, nullable=False)
+    remote_addr = db.Column(db.String(100), nullable=True)
+    user_agent = db.Column(db.String(255), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
 
 class Category(db.Model):
     __tablename__ = 'categories'
@@ -309,6 +320,8 @@ def admin_logout():
     flash('Logged out successfully.', 'success')
     return redirect(url_for('index'))
 
+from sqlalchemy import func
+
 @admin_bp.route('/')
 @login_required
 @admin_required
@@ -318,9 +331,21 @@ def dashboard():
     total_subscribers = Subscriber.query.count()
     total_messages = Message.query.count()
     total_reports = CommentReport.query.count()
+    
+    articles_for_graph = Article.query.filter_by(status='published').order_by(Article.published_at.asc()).all()
+    
+    # Aggregate request logs grouped by date (YYYY-MM-DD)
+    logs_data = db.session.query(
+        func.date(RequestLog.created_at).label('log_date'),
+        func.count(RequestLog.id).label('log_count')
+    ).group_by(func.date(RequestLog.created_at))\
+     .order_by(func.date(RequestLog.created_at).asc())\
+     .all()
+
     articles = Article.query.order_by(Article.created_at.desc()).all()
     comments = Comment.query.order_by(Comment.created_at.desc()).limit(10).all()
     categories = Category.query.all()
+    
     return render_template('admin/dashboard.html',
                            total_articles=total_articles,
                            total_comments=total_comments,
@@ -328,15 +353,40 @@ def dashboard():
                            total_messages=total_messages,
                            total_reports=total_reports,
                            articles=articles,
+                           articles_for_graph=articles_for_graph,
+                           logs_data=logs_data,
                            comments=comments,
                            categories=categories)
 
+@admin_bp.route('/logs')
+@login_required
+@admin_required
+def logs():
+        logs = RequestLog.query.order_by(RequestLog.created_at.desc()).limit(200).all()
+        return render_template('admin/logs.html', logs=logs)
+
+    
 @admin_bp.route('/subscribers')
 @login_required
 @admin_required
 def subscribers():
     subscribers = Subscriber.query.order_by(Subscriber.created_at.desc()).all()
     return render_template('admin/subscribers.html', subscribers=subscribers)
+
+@admin_bp.route('/logs/delete-batch', methods=['POST'])
+@login_required
+@admin_required
+def logs_delete_batch():
+    log_ids = request.form.getlist('log_ids', type=int)
+    
+    if log_ids:
+        RequestLog.query.filter(RequestLog.id.in_(log_ids)).delete(synchronize_session=False)
+        db.session.commit()
+        flash(f'Successfully deleted {len(log_ids)} log entry/entries.', 'success')
+    else:
+        flash('No logs selected for deletion.', 'error')
+        
+    return redirect(url_for('admin.logs'))
 
 @admin_bp.route('/subscribers/<int:id>/delete', methods=['POST'])
 @login_required
@@ -560,6 +610,30 @@ def create_app(config_class=Config):
 
         flash('Comment deleted.', 'success')
         return redirect(next_url)
+    
+   
+    @app.after_request
+    def log_request(response):
+            if request.path.startswith('/static') or request.path == '/favicon.ico':
+                return response
+            ua = request.user_agent.string[:255]
+
+            try:
+                log = RequestLog(
+                    method=request.method,
+                    path=request.path,
+                    status_code=response.status_code,
+                    remote_addr=request.remote_addr,
+                    user_agent=ua
+                )
+                db.session.add(log)
+                db.session.commit()
+            except Exception as e:
+                db.session.rollback()
+                print(f"Logging error: {e}")
+
+            return response
+
 
 
     @app.route('/logout')

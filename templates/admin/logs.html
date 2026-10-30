@@ -1,0 +1,119 @@
+<!-- templates/admin/logs.html -->
+{% extends "admin_base.html" %}
+
+{% block title %}System Logs — {{ site_name }}{% endblock %}
+
+{% block content %}
+<div class="space-y-6" x-data="{ 
+    search: '',
+    selectedLogs: [], 
+    selectAll: false,
+    toggleAll() {
+        if (this.selectAll) {
+            // Select only visible rows that match the current search filter
+            this.selectedLogs = Array.from(document.querySelectorAll('.log-row'))
+                .filter(row => row.style.display !== 'none')
+                .map(row => row.dataset.id);
+        } else {
+            this.selectedLogs = [];
+        }
+    }
+}">
+    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b border-gray-200 pb-4 gap-4">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">System Request Logs</h1>
+            <p class="text-xs text-gray-500">Monitor incoming HTTP traffic and endpoint activity (Total: {{ logs|length }}).</p>
+        </div>
+        <div class="flex items-center space-x-3 w-full sm:w-auto">
+            <!-- Instant Search Input -->
+            <div class="relative flex-1 sm:w-64">
+                <span class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-gray-400 text-xs">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                </span>
+                <input type="text" 
+                       x-model="search" 
+                       placeholder="Instant search any field..." 
+                       class="w-full pl-8 pr-4 py-2 bg-white border border-gray-200 rounded-lg text-xs text-gray-800 focus:outline-none focus:border-gray-400 transition">
+            </div>
+
+            <!-- Delete Selected Button -->
+            <form action="{{ url_for('admin.logs_delete_batch') }}" method="POST" onsubmit="return confirm('Delete selected log entries?');">
+                <template x-for="id in selectedLogs">
+                    <input type="hidden" name="log_ids" :value="id">
+                </template>
+                <button type="submit" 
+                        :disabled="selectedLogs.length === 0"
+                        class="px-4 py-2 bg-red-50 text-red-600 border border-red-200 text-xs font-bold rounded-lg hover:bg-red-100 transition disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap">
+                    Delete (<span x-text="selectedLogs.length"></span>)
+                </button>
+            </form>
+            <a href="{{ url_for('admin.dashboard') }}" class="px-4 py-2 border border-gray-200 text-gray-600 text-xs font-bold rounded-lg hover:bg-gray-50 transition whitespace-nowrap">
+                &larr; Back
+            </a>
+        </div>
+    </div>
+
+    <!-- Logs Table -->
+    <div class="overflow-x-auto border border-gray-200 rounded-xl bg-white shadow-sm">
+        <table class="w-full text-left text-xs text-gray-600">
+            <thead class="bg-gray-50 border-b border-gray-200 font-bold uppercase text-gray-500 tracking-wider">
+                <tr>
+                    <th class="p-3 w-10 text-center">
+                        <input type="checkbox" x-model="selectAll" @change="toggleAll()" class="rounded border-gray-300 text-gray-900 focus:ring-0 cursor-pointer">
+                    </th>
+                    <th class="p-3">Method</th>
+                    <th class="p-3">Path</th>
+                    <th class="p-3">Status</th>
+                    <th class="p-3">IP Address</th>
+                    <th class="p-3">User Agent</th>
+                    <th class="p-3 text-right">Timestamp</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100 font-mono">
+                {% for log in logs %}
+                <tr class="log-row hover:bg-gray-50/50 transition"
+                    data-id="{{ log.id }}"
+                    x-show="search === '' || [
+                        '{{ log.method|lower }}',
+                        '{{ log.path|lower }}',
+                        '{{ log.status_code }}',
+                        '{{ log.remote_addr|lower if log.remote_addr else '' }}',
+                        '{{ log.user_agent|lower if log.user_agent else '' }}',
+                        '{{ log.created_at.strftime('%Y-%m-%d %H:%M:%S') }}'
+                    ].some(field => field.includes(search.toLowerCase()))">
+                    <td class="p-3 text-center">
+                        <input type="checkbox" value="{{ log.id }}" x-model="selectedLogs" class="log-checkbox rounded border-gray-300 text-gray-900 focus:ring-0 cursor-pointer">
+                    </td>
+                    <td class="p-3 font-bold">
+                        <span class="px-2 py-0.5 rounded text-[10px] uppercase {% if log.method == 'GET' %}bg-blue-50 text-blue-700{% elif log.method == 'POST' %}bg-amber-50 text-amber-700{% else %}bg-gray-100 text-gray-700{% endif %}">
+                            {{ log.method }}
+                        </span>
+                    </td>
+                    <td class="p-3 font-semibold text-gray-900 truncate max-w-xs" title="{{ log.path }}">
+                        {{ log.path }}
+                    </td>
+                    <td class="p-3 font-bold">
+                        <span class="px-2 py-0.5 rounded text-[10px] uppercase {% if log.status_code >= 200 and log.status_code < 300 %}bg-emerald-50 text-emerald-700{% elif log.status_code >= 400 %}bg-red-50 text-red-700{% else %}bg-gray-100 text-gray-600{% endif %}">
+                            {{ log.status_code }}
+                        </span>
+                    </td>
+                    <td class="p-3 text-gray-500">{{ log.remote_addr or 'N/A' }}</td>
+                    <td class="p-3 text-gray-400 truncate max-w-xs text-[10px]" title="{{ log.user_agent }}">
+                        {{ log.user_agent or 'Unknown' }}
+                    </td>
+                    <td class="p-3 text-right text-gray-500 whitespace-nowrap text-[11px]">
+                        {{ log.created_at.strftime('%Y-%m-%d %H:%M:%S') }}
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="7" class="p-8 text-center text-gray-400 font-sans font-medium">No request logs recorded yet.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+{% endblock %}

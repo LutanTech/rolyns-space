@@ -1,94 +1,140 @@
 <!-- templates/admin/dashboard.html -->
-{% extends "base.html" %}
+{% extends "admin_base.html" %}
 
 {% block title %}Admin Dashboard — {{ site_name }}{% endblock %}
 
 {% block content %}
 <div class="space-y-8">
-    <div class="flex items-center justify-between border-b border-gray-100 pb-6 flex-col">
-        <div class="flex gap-4 items-center">
-            <div><img src="{{ session.get('photo') or 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQz3XbgqPWjpcGeuSXJJq-pOo7acTbDktc7FYvWsLVSUeu3FVFMOxUdOvcj&s=10'}}" class="w-9 h-9 rounded-full"></div>
+    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between bg-white border border-gray-200 rounded-xl p-6 shadow-sm gap-4">
+        <div class="flex items-center space-x-4">
+            <img src="{{ session.get('photo') or 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQz3XbgqPWjpcGeuSXJJq-pOo7acTbDktc7FYvWsLVSUeu3FVFMOxUdOvcj&s=10' }}" class="w-12 h-12 rounded-full border border-gray-300 grayscale">
             <div>
-            <h1 class="text-2xl font-bold text-gray-900">Admin Dashboard</h1>
-            <p class="text-xs text-gray-500">Manage publications, comments and site stats.</p>
+                <h1 class="text-xl font-bold text-gray-900 tracking-tight">Admin Overview</h1>
+                <p class="text-xs text-gray-500">System performance, analytics, and content control.</p>
             </div>
         </div>
-        <div class="flex items-center space-x-3">
-            <a href="{{ url_for('admin.article_create') }}" class="px-4 py-2 bg-[#7cffcb] text-gray-900 text-xs font-bold rounded hover:opacity-90 transition">
+        <div class="flex items-center space-x-2">
+            <a href="{{ url_for('admin.article_create') }}" class="px-4 py-2 bg-gray-900 text-white text-xs font-bold rounded-lg hover:bg-gray-800 transition shadow-sm">
                 + New Article
             </a>
-            <a href="{{ url_for('admin.admin_logout') }}" class="px-4 py-2 border border-gray-200 text-gray-600 text-xs font-bold rounded hover:bg-gray-50 transition">
-                Logout
-            </a>
-            <a href="{{ url_for('admin.messages') }}" class="px-4 py-2 border border-gray-200 text-gray-600 text-xs font-bold rounded hover:bg-gray-50 transition">
+            <a href="{{ url_for('admin.messages') }}" class="px-3 py-2 bg-white border border-gray-200 text-gray-700 text-xs font-medium rounded-lg hover:bg-gray-50 transition">
                 Messages ({{ total_messages }})
             </a>
-            <a href="{{ url_for('admin.reports') }}" class="px-4 py-2 border border-gray-200 text-gray-600 text-xs font-bold rounded hover:bg-gray-50 transition">
+            <a href="{{ url_for('admin.reports') }}" class="px-3 py-2 bg-white border border-gray-200 text-gray-700 text-xs font-medium rounded-lg hover:bg-gray-50 transition">
                 Reports ({{ total_reports }})
+            </a>
+            <a href="{{ url_for('admin.logs') }}" class="px-3 py-2 bg-white border border-gray-200 text-gray-700 text-xs font-medium rounded-lg hover:bg-gray-50 transition">
+                Logs
             </a>
         </div>
     </div>
 
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
-        <div class="p-6 bg-white border border-gray-100 rounded space-y-1">
-            <span class="text-xs text-gray-500 font-medium">Total Articles</span>
-            <div class="text-2xl font-bold text-gray-900">{{ total_articles }}</div>
+    <!-- Quick Stats Grid -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        <div class="p-5 bg-white border border-gray-200 rounded-xl shadow-sm space-y-1">
+            <span class="text-[11px] font-bold uppercase tracking-wider text-gray-400">Total Articles</span>
+            <div class="text-2xl font-black text-gray-900">{{ total_articles }}</div>
         </div>
-        <a href="{{ url_for('admin.comments') }}" class="p-6 bg-white border border-gray-100 rounded space-y-1 block hover:border-gray-200 transition">
-            <span class="text-xs text-gray-500 font-medium">Comments</span>
-            <div class="text-2xl font-bold text-gray-900">{{ total_comments }}</div>
+        
+        <a href="{{ url_for('admin.comments') }}" class="p-5 bg-white border border-gray-200 rounded-xl shadow-sm space-y-1 block hover:border-gray-400 transition group">
+            <span class="text-[11px] font-bold uppercase tracking-wider text-gray-400 group-hover:text-gray-700">Comments</span>
+            <div class="text-2xl font-black text-gray-900 flex items-center justify-between">
+                <span>{{ total_comments }}</span>
+                <span class="text-xs text-gray-400 font-normal group-hover:translate-x-1 transition">&rarr;</span>
+            </div>
         </a>
         
-        <a href="{{ url_for('admin.subscribers') }}" class="p-6 bg-white border border-gray-100 rounded space-y-1 block hover:border-gray-200 transition">
-            <span class="text-xs text-gray-500 font-medium">Subscribers</span>
-            <div class="text-2xl font-bold text-gray-900">{{ total_subscribers }}</div>
+        <a href="{{ url_for('admin.subscribers') }}" class="p-5 bg-white border border-gray-200 rounded-xl shadow-sm space-y-1 block hover:border-gray-400 transition group">
+            <span class="text-[11px] font-bold uppercase tracking-wider text-gray-400 group-hover:text-gray-700">Subscribers</span>
+            <div class="text-2xl font-black text-gray-900 flex items-center justify-between">
+                <span>{{ total_subscribers }}</span>
+                <span class="text-xs text-gray-400 font-normal group-hover:translate-x-1 transition">&rarr;</span>
+            </div>
         </a>
-        <div class="p-6 bg-white border border-gray-100 rounded space-y-1">
-            <span class="text-xs text-gray-500 font-medium">Messages</span>
-            <div class="text-2xl font-bold text-gray-900">{{ total_messages }}</div>
-        </div>
-        <div class="p-6 bg-white border border-gray-100 rounded space-y-1">
-            <span class="text-xs text-gray-500 font-medium">Reports</span>
-            <div class="text-2xl font-bold text-gray-900">{{ total_reports }}</div>
+
+        <div class="p-5 bg-white border border-gray-200 rounded-xl shadow-sm space-y-1">
+            <span class="text-[11px] font-bold uppercase tracking-wider text-gray-400">Messages</span>
+            <div class="text-2xl font-black text-gray-900">{{ total_messages }}</div>
         </div>
 
+        <div class="p-5 bg-white border border-gray-200 rounded-xl shadow-sm space-y-1">
+            <span class="text-[11px] font-bold uppercase tracking-wider text-gray-400">Reports</span>
+            <div class="text-2xl font-black text-gray-900">{{ total_reports }}</div>
+        </div>
     </div>
 
+    <!-- Charts Grid Section -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Article Bar Graph -->
+        <div class="bg-white border border-gray-200 rounded-xl p-6 shadow-sm space-y-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h2 class="text-sm font-bold text-gray-900">Article Views Breakdown</h2>
+                    <p class="text-[11px] text-gray-400">Views per article mapped by publication date</p>
+                </div>
+                <span class="text-[10px] font-mono bg-gray-100 text-gray-600 px-2 py-1 rounded">Articles</span>
+            </div>
 
-    <div class="space-y-4">
-        <h2 class="text-lg font-bold text-gray-900">Articles</h2>
-        <div class="overflow-x-auto border border-gray-100 rounded">
+            <div class="relative w-full h-72">
+                <canvas id="viewsBarChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Request Logs per Day Graph -->
+        <div class="bg-white border border-gray-200 rounded-xl p-6 shadow-sm space-y-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h2 class="text-sm font-bold text-gray-900">System Traffic (Logs / Day)</h2>
+                    <p class="text-[11px] text-gray-400">Incoming HTTP request counts aggregated daily</p>
+                </div>
+                <span class="text-[10px] font-mono bg-gray-100 text-gray-600 px-2 py-1 rounded">RequestLogs</span>
+            </div>
+
+            <div class="relative w-full h-72">
+                <canvas id="logsLineChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Articles Table -->
+    <div class="bg-white border border-gray-200 rounded-xl shadow-sm p-6 space-y-4">
+        <div class="flex items-center justify-between">
+            <h2 class="text-base font-bold text-gray-900">Recent Articles</h2>
+            <span class="text-xs text-gray-400 font-medium">Published & draft posts</span>
+        </div>
+
+        <div class="overflow-x-auto">
             <table class="w-full text-left text-xs text-gray-600">
-                <thead class="bg-gray-50 border-b border-gray-100 font-bold uppercase text-gray-700">
+                <thead class="bg-gray-50 border-b border-gray-200 font-bold uppercase text-gray-500 tracking-wider">
                     <tr>
-                        <th class="p-3">Title</th>
+                        <th class="p-3 rounded-l-lg">Title</th>
                         <th class="p-3">Category</th>
                         <th class="p-3">Status</th>
                         <th class="p-3">Views</th>
-                        <th class="p-3 text-right">Actions</th>
+                        <th class="p-3 text-right rounded-r-lg">Actions</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-gray-100 bg-white">
+                <tbody class="divide-y divide-gray-100">
                     {% for article in articles %}
-                    <tr>
+                    <tr class="hover:bg-gray-50 transition">
                         <td class="p-3 font-semibold text-gray-900">{{ article.title }}</td>
-                        <td class="p-3">{{ article.category.name }}</td>
+                        <td class="p-3 text-gray-500">{{ article.category.name }}</td>
                         <td class="p-3">
-                            <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase {% if article.status == 'published' %}bg-green-50 text-green-700{% else %}bg-yellow-50 text-yellow-700{% endif %}">
+                            <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase {% if article.status == 'published' %}bg-gray-100 text-gray-900{% else %}bg-gray-100 text-gray-500{% endif %}">
                                 {{ article.status }}
                             </span>
                         </td>
-                        <td class="p-3">{{ "{:,}".format(article.views_count or 0) }}</td>
-                        <td class="p-3 text-right space-x-2">
-                            <a href="{{ url_for('admin.article_edit', id=article.id) }}" class="text-[#7cffcb] font-bold hover:underline">Edit</a>
-                            <form action="{{ url_for('admin.article_delete', id=article.id) }}" method="POST" class="inline" onsubmit="return confirm('Delete article?');">
-                                <button type="submit" class="text-red-600 font-bold hover:underline">Delete</button>
+                        <td class="p-3 font-mono font-medium text-gray-700">{{ "{:,}".format(article.views_count or 0) }}</td>
+                        <td class="p-3 text-right space-x-3">
+                            <a href="{{ url_for('admin.article_edit', id=article.id) }}" class="text-gray-900 font-bold hover:underline">Edit</a>
+                            <form action="{{ url_for('admin.article_delete', id=article.id) }}" method="POST" class="inline" onsubmit="return confirm('Delete article permanently?');">
+                                <button type="submit" class="text-gray-400 hover:text-red-600 font-bold transition">Delete</button>
                             </form>
                         </td>
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="5" class="p-4 text-center text-gray-400">No articles found.</td>
+                        <td colspan="5" class="p-8 text-center text-gray-400 font-medium">No articles found.</td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -96,4 +142,116 @@
         </div>
     </div>
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    // 1. Article Views Bar Chart
+    const ctxBar = document.getElementById('viewsBarChart').getContext('2d');
+    const rawArticles = [
+        {% for art in articles_for_graph %}
+        {
+            date: "{{ art.published_at.strftime('%Y-%m-%d') }}",
+            views: {{ art.views_count or 0 }},
+            title: {{ art.title|tojson }}
+        }{% if not loop.last %},{% endif %}
+        {% endfor %}
+    ];
+
+    new Chart(ctxBar, {
+        type: 'bar',
+        data: {
+            labels: rawArticles.map(art => art.date + ' — ' + (art.title.length > 20 ? art.title.substring(0, 20) + '...' : art.title)),
+            datasets: [{
+                label: 'Article Views',
+                data: rawArticles.map(art => art.views),
+                backgroundColor: '#111827',
+                borderColor: '#111827',
+                borderWidth: 1,
+                borderRadius: 4,
+                barPercentage: 0.7,
+                categoryPercentage: 0.8
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        title: ctx => rawArticles[ctx[0].dataIndex].title,
+                        label: ctx => ' Views: ' + ctx.parsed.y
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    grid: { display: false },
+                    ticks: { font: { size: 9 }, color: '#6b7280', maxRotation: 45, minRotation: 45 }
+                },
+                y: {
+                    beginAtZero: true,
+                    grid: { color: '#f3f4f6' },
+                    ticks: { font: { size: 10 }, color: '#9ca3af' }
+                }
+            }
+        }
+    });
+
+    // 2. Request Logs per Day Line Chart
+    const ctxLine = document.getElementById('logsLineChart').getContext('2d');
+    const rawLogs = [
+        {% for item in logs_data %}
+        {
+            date: "{{ item.log_date }}",
+            count: {{ item.log_count }}
+        }{% if not loop.last %},{% endif %}
+        {% endfor %}
+    ];
+
+    new Chart(ctxLine, {
+        type: 'line',
+        data: {
+            labels: rawLogs.map(item => item.date),
+            datasets: [{
+                label: 'Requests',
+                data: rawLogs.map(item => item.count),
+                borderColor: '#111827',
+                backgroundColor: 'rgba(17, 24, 39, 0.05)',
+                borderWidth: 2,
+                fill: true,
+                tension: 0.2,
+                pointBackgroundColor: '#111827',
+                pointRadius: 4,
+                pointHoverRadius: 6
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        title: ctx => 'Date: ' + ctx[0].label,
+                        label: ctx => ' Requests: ' + ctx.parsed.y
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    grid: { display: false },
+                    ticks: { font: { size: 9 }, color: '#6b7280', maxRotation: 45, minRotation: 45 }
+                },
+                y: {
+                    beginAtZero: true,
+                    grid: { color: '#f3f4f6' },
+                    ticks: { font: { size: 10 }, color: '#9ca3af' }
+                }
+            }
+        }
+    });
+});
+</script>
 {% endblock %}
